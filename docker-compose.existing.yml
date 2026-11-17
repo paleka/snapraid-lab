@@ -1,0 +1,25 @@
+# Tests the installation on a machine where SnapRAID is already used from the command line:
+# the engine of the distribution, a snapraid.conf, an /etc/fstab and a mergerfs pool written by
+# hand, a cron job. Nothing of it may change, and 'snapraid' has to keep working next to the daemon.
+#
+#     docker compose -f docker-compose.existing.yml up --build --abort-on-container-exit --exit-code-from tests
+#     docker compose -f docker-compose.existing.yml down -v
+#
+# It builds no lab and publishes no port. The packages are for x86-64: on another machine
+# (Apple silicon) the image is built and run emulated, which is slow. The container needs the
+# network: the installer takes the dependencies of the packages with apt.
+name: snapraid-lab-existing
+services:
+  tests:
+    platform: linux/amd64
+    build:
+      context: .
+      additional_contexts:
+        daemon: ${DAEMON_SRC:-../snapraid-daemon}
+      args:
+        LAB_PACKAGES: "1"
+    container_name: snapraid-lab-existing
+    privileged: true
+    init: true
+    environment:
+      LAB_EXISTING: "1"

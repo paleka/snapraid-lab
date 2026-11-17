@@ -229,7 +229,7 @@ req PUT $S/engine_conf "{\"text\":\"$TEXT\"}";    expect "the configuration is w
 check "the file has the text" grep -q "^data d3 $T/d3$" "$CONF"
 check "the inventory returns it" test "$(curl -s $S | jq -r .engine_conf.text | head -1)" = "# written by the tests"
 req PUT $S/engine_conf "{\"text\":\"$TEXT# second\\n\"}"; expect "it is written again" 200
-check "the previous one is kept as .bak" test "$(tail -1 "$CONF.bak")" = "exclude /lost+found/"
+check "the previous one is kept as .snapraidd.bak" test "$(tail -1 "$CONF.snapraidd.bak")" = "exclude /lost+found/"
 
 fill $T/d1/Movies 12 3000; fill $T/d1/Music 30 200; fill $T/d2/Photos 40 150; fill $T/d3/Docs 25 60
 fill $T/d2/Movies/extra 2 2000

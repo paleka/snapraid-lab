@@ -36,6 +36,16 @@ RUN cd /src/snapraid-daemon \
 # Storage page. A failure stops the build.
 RUN cd /build-daemon && make check
 
+# The package of the daemon and its installer, for the test of an installation on a machine
+# already using SnapRAID (docker-compose.existing.yml). Built only when asked: the packages
+# are for x86-64 only. The version comes from the tags of the checkout.
+ARG LAB_PACKAGES=0
+RUN mkdir /pkg && if [ "$LAB_PACKAGES" = 1 ]; then \
+        cd /src/snapraid-daemon && ./configure > /dev/null && make dist > /dev/null \
+     && bash makedeb.sh > /dev/null \
+     && cp snapraid-daemon-storage_*_amd64.deb /pkg/daemon.deb && cp installer.sh /pkg/installer.sh; \
+    fi
+
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
         zlib1g e2fsprogs xfsprogs btrfs-progs fdisk util-linux mergerfs fuse3 rsync attr jq procps curl ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -50,6 +60,20 @@ COPY hook.sh notify.sh /usr/local/share/lab/
 COPY entrypoint.sh /usr/local/bin/lab-entrypoint
 COPY lab /usr/local/bin/lab
 COPY tests /usr/local/share/lab/tests
+# The engines for the same test: the one of the distribution (SnapRAID 12, whose content file
+# SnapRAID 15 refuses), SnapRAID 14.10 that converts it, and SnapRAID 15, from the releases of
+# their author. The checksums are the ones of the CHECKSUMS file of SnapRAID.
+ARG LAB_PACKAGES=0
+COPY --from=build /pkg /usr/local/share/lab/pkg
+RUN if [ "$LAB_PACKAGES" = 1 ]; then \
+        cd /usr/local/share/lab/pkg \
+     && apt-get update && apt-get download snapraid && mv snapraid_*.deb snapraid-old.deb \
+     && rm -rf /var/lib/apt/lists/* \
+     && curl -fsSL -o snapraid-migrate.deb https://github.com/amadvance/snapraid/releases/download/v14.10/snapraid_14.10-1_amd64.deb \
+     && curl -fsSL -o snapraid-new.deb https://github.com/amadvance/snapraid/releases/download/v15.2/snapraid_15.2-1_amd64.deb \
+     && echo "15f5fd9f639912c94daae9d75d3567b7a3fc0e18475880f972acd8d8e9e0992c  snapraid-migrate.deb" | sha256sum -c - \
+     && echo "9c78f158347cc0340ed5c9877724bb4f3b5e5fb48b43332ee7e0e7b6a63642d9  snapraid-new.deb" | sha256sum -c -; \
+    fi
 RUN chmod 755 /usr/libexec/lab/fake-smartctl /usr/sbin/lsblk /usr/local/share/lab/hook.sh /usr/local/share/lab/notify.sh /usr/local/bin/lab-entrypoint /usr/local/bin/lab /usr/local/share/lab/tests/*.sh
 EXPOSE 7627
 ENTRYPOINT ["/usr/local/bin/lab-entrypoint"]

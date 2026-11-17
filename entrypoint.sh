@@ -26,6 +26,15 @@ PARITY_NAMES=(parity 2-parity 3-parity 4-parity 5-parity 6-parity)
 
 log() { echo "[lab] $*"; }
 
+# The test of an installation on a machine already using SnapRAID builds its own machine,
+# with the packages: no lab is made, and no daemon is started here.
+if [ "${LAB_EXISTING:-0}" = 1 ]; then
+    /usr/local/share/lab/tests/existing-setup-test.sh
+    rc=$?
+    log "tests ended with $rc failures"
+    exit $rc
+fi
+
 mkdir -p $LAB/img $LAB/etc $LAB/log $LAB/smart /mnt/lab /run/lab/map /run/lab/standby
 rm -f /run/lab/map/* /run/lab/standby/*
 

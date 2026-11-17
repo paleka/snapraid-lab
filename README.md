@@ -58,7 +58,7 @@ started with `LAB_PRESET=blank` (`shots-blank.json`).
 | What | Version |
 |---|---|
 | SnapRAID engine | release 15.1, unmodified, commit `4054832` (checked by the `Dockerfile`) |
-| SnapRAID Daemon | the checkout next to this folder; all the tests last run with `storage` at `98714a1`, the pictures taken with `7250acd` |
+| SnapRAID Daemon | the checkout next to this folder; all the tests last run with `storage` at `8914e17`, the pictures taken with `7250acd` |
 | mergerfs, xfsprogs, btrfs-progs | the ones of Debian 12 |
 
 ## Start
@@ -239,6 +239,26 @@ compressed logs); a maintenance of the three arrays with the hook called and the
 received; snapshots, and a disk lost with changes not synced rebuilt completely thanks to them;
 a hook that refuses; disks going bad and good again; the temperature limit; and the login.
 
+A sixth one, `tests/existing-setup-test.sh`, checks that the daemon is a drop in addition to a
+machine where SnapRAID is already used from the command line. It builds no lab: it makes the
+machine of a long time user (SnapRAID 12 of Debian, a `snapraid.conf` and an `/etc/fstab` written
+by hand with comments, a mergerfs pool given with a pattern, a nightly cron job), runs the
+installer of the fork on it, and compares everything before and after:
+
+    docker compose -f docker-compose.existing.yml up --build --abort-on-container-exit --exit-code-from tests
+    docker compose -f docker-compose.existing.yml down -v
+
+It covers the content file of SnapRAID 13 and older, that SnapRAID 15 refuses, converted by the
+installer without touching the parity; the installer stopping with nothing changed when the array
+has changes not synced, when a sync of the owner is running, when a disk is not mounted, and when
+the engine was built from the sources; the configuration, `/etc/fstab`, the cron job, the parity
+and the data left as they were, timestamps included; the daemon starting without a schedule and
+without spin down; `snapraid` diff, sync, fix, scrub and check from the shell while the daemon
+runs, and the daemon noticing them; a command of the daemon giving way when the shell holds the
+array; a save from the web UI keeping comments and the owner's own `.bak`; a change of the pool
+that does not remount it; and the package removed with everything as before. The packages are for
+x86-64, so on Apple silicon this image is built and run emulated, and it needs the network.
+
 ## What is emulated
 
 - Every disk is a sparse image file, attached as a loop device with a partition table,
@@ -320,13 +340,14 @@ SMART changes show up at the next probe (every minute).
 
 | File | Purpose |
 |---|---|
-| `Dockerfile` | builds the engine and the daemon, installs the fake smartctl |
+| `Dockerfile` | builds the engine and the daemon, installs the fake smartctl; with `LAB_PACKAGES=1` also the package of the daemon and the engines of the installation test |
 | `docker-compose.yml` | the showcase lab: disks, sizes, kinds, filesystems, UI choice, port, volumes |
 | `docker-compose.simple.yml` | a small lab: one array of equal disks |
 | `docker-compose.showcase.yml` | the showcase lab, running `tests/showcase-test.sh` |
 | `docker-compose.test.yml` | throwaway lab that runs `tests/api-test.sh` |
 | `docker-compose.sizes.yml` | throwaway lab of mixed disk sizes that runs `tests/mixed-size-test.sh` |
 | `docker-compose.arrays.yml` | throwaway lab that runs `tests/multi-array-test.sh` |
+| `docker-compose.existing.yml` | no lab: a machine already using SnapRAID from the shell, for `tests/existing-setup-test.sh` |
 | `entrypoint.sh` | creates and mounts the disks, writes the configs, starts `snapraidd` |
 | `fake-smartctl`, `smartctl-launcher.c` | SMART emulation (SnapRAID only runs real binaries, hence the launcher) |
 | `fake-lsblk` | `lsblk` with the model, serial and bus of the emulated disks |
