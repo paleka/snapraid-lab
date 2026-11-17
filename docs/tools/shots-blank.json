@@ -1,0 +1,260 @@
+{
+ "comment": "Lab started with LAB_PRESET=blank",
+ "shots": [
+  {
+   "name": "setup-1-disks",
+   "hash": "#/storage",
+   "h": 1150,
+   "steps": [
+    {
+     "click": "[data-st=wizard]",
+     "wait": 1500
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop4\"]",
+     "value": "p0",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop5\"]",
+     "value": "p1",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop6\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop7\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop8\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop9\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop10\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop11\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop12\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop13\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop14\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop15\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop16\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop17\"]",
+     "value": "ignore",
+     "wait": 150
+    }
+   ]
+  },
+  {
+   "name": "setup-2-options",
+   "hash": "#/storage",
+   "h": 1150,
+   "steps": [
+    {
+     "click": "[data-st=wizard]",
+     "wait": 1500
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop4\"]",
+     "value": "p0",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop5\"]",
+     "value": "p1",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop6\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop7\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop8\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop9\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop10\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop11\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop12\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop13\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop14\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop15\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop16\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop17\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "click": "button:has-text('Next')",
+     "wait": 1200
+    }
+   ]
+  },
+  {
+   "name": "setup-3-review",
+   "hash": "#/storage",
+   "h": 1150,
+   "steps": [
+    {
+     "click": "[data-st=wizard]",
+     "wait": 1500
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop4\"]",
+     "value": "p0",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop5\"]",
+     "value": "p1",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop6\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop7\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop8\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop9\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop10\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop11\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop12\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop13\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop14\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop15\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop16\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "select": "[data-role-for=\"/dev/loop17\"]",
+     "value": "ignore",
+     "wait": 150
+    },
+    {
+     "click": "button:has-text('Next')",
+     "wait": 1200
+    },
+    {
+     "click": "button:has-text('Next')",
+     "wait": 1200
+    }
+   ]
+  }
+ ]
+}

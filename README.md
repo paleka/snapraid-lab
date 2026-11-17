@@ -27,27 +27,31 @@ The lab and the fork were written with the help of an AI coding assistant (Claud
 
 ## Screenshots
 
-![Tour of the Storage page](docs/screenshots/tour.gif)
+![Tour of the Storage and Arrays pages](docs/screenshots/tour.gif)
 
-The Storage page inside SnapRAID Commander, the web UI of SnapRAID Daemon by Andrea Mazzoleni.
-Everything outside the Storage page, and the look of the UI, is his work. The pictures are taken
-from this lab: the disks are loop devices of a few hundred MB.
+The Storage and Arrays pages inside SnapRAID Commander, the web UI of SnapRAID Daemon by Andrea
+Mazzoleni. Everything outside those two pages, and the look of the UI, is his work. The pictures
+are all taken from this lab as `docker compose up --build` makes it: the disks are loop devices
+of a few hundred MB, described to SnapRAID and to the UI as the disks of the table in
+[The showcase lab](#the-showcase-lab).
 
 | | |
 |---|---|
-| **Overview**: layout of the array and of the pool, and the advisor<br>[![Overview](docs/screenshots/overview.png)](docs/screenshots/overview.png) | **Array & disks**: every disk, with replace, remove and format<br>[![Array and disks](docs/screenshots/array-and-disks.png)](docs/screenshots/array-and-disks.png) |
-| **Pool**: mergerfs branches, policy, balance, duplicates, file browser<br>[![Pool](docs/screenshots/pool.png)](docs/screenshots/pool.png) | **Configuration**: the SnapRAID configuration, as a form or as text<br>[![Configuration](docs/screenshots/configuration.png)](docs/screenshots/configuration.png) |
-| **Guided setup, 1**: choose the disks and their role<br>[![Guided setup, disks](docs/screenshots/setup-1-disks.png)](docs/screenshots/setup-1-disks.png) | **Guided setup, 2**: options<br>[![Guided setup, options](docs/screenshots/setup-2-options.png)](docs/screenshots/setup-2-options.png) |
-| **Guided setup, 3**: review of what is going to be done, before anything is erased<br>[![Guided setup, review](docs/screenshots/setup-3-review.png)](docs/screenshots/setup-3-review.png) | **Create a pool**<br>[![Create a pool](docs/screenshots/pool-create.png)](docs/screenshots/pool-create.png) |
-| **Replace a disk**: the steps, and the confirmation to type<br>[![Replace a disk](docs/screenshots/replace-disk.png)](docs/screenshots/replace-disk.png) | **Balance**: what happens and what does not change<br>[![Balance](docs/screenshots/balance.png)](docs/screenshots/balance.png) |
-| **Degraded array**: a disk came back empty<br>[![Degraded array](docs/screenshots/degraded.png)](docs/screenshots/degraded.png) | **Recover**: fix, check and sync in one command<br>[![Recover](docs/screenshots/recover.png)](docs/screenshots/recover.png) |
-| **Recovery in the Tasks page**<br>[![Recovery tasks](docs/screenshots/recover-tasks.png)](docs/screenshots/recover-tasks.png) | **Arrays**: every array, the pools and what protects them<br>[![Arrays](docs/screenshots/arrays.png)](docs/screenshots/arrays.png) |
-| **Add an array**<br>[![Add an array](docs/screenshots/arrays-add.png)](docs/screenshots/arrays-add.png) | **Move a disk to another array**, with its files<br>[![Move a disk](docs/screenshots/arrays-move.png)](docs/screenshots/arrays-move.png) |
-| **Storage of the second array**: the sidebar chooses the array<br>[![Storage of the second array](docs/screenshots/arrays-storage.png)](docs/screenshots/arrays-storage.png) | **Kinds of disk**: HDD, SAS, SSD and two disks outside the array, in the Disks page of the daemon<br>[![Kinds of disk](docs/screenshots/showcase-disks.png)](docs/screenshots/showcase-disks.png) |
-| **An array of flash disks**: NVMe and SSD, with their wear<br>[![Flash array](docs/screenshots/showcase-disks-flash.png)](docs/screenshots/showcase-disks-flash.png) | **A split parity**: one parity level over two disks, the first one full<br>[![Split parity](docs/screenshots/showcase-split-parity.png)](docs/screenshots/showcase-split-parity.png) |
+| **Arrays**: three arrays in one daemon, the four pools, and what protects every disk<br>[![Arrays](docs/screenshots/arrays.png)](docs/screenshots/arrays.png) | **Overview**: the default array, its pool and the advisor; the spares and the disks outside the array are on the right<br>[![Overview](docs/screenshots/overview.png)](docs/screenshots/overview.png) |
+| **Array & disks**: every disk the machine sees, with model, serial, kind, size and filesystem<br>[![Array & disks](docs/screenshots/array-and-disks.png)](docs/screenshots/array-and-disks.png) | **Kinds of disk**: HDD, SAS and SSD in one array, and two disks outside it that are watched all the same (`extra`)<br>[![Kinds of disk](docs/screenshots/showcase-disks.png)](docs/screenshots/showcase-disks.png) |
+| **An array of flash disks**: NVMe and SSD, with their wear in place of the failure probability<br>[![An array of flash disks](docs/screenshots/showcase-disks-flash.png)](docs/screenshots/showcase-disks-flash.png) | **A split parity**: one parity level over two disks: the first is full, the second holds the rest<br>[![A split parity](docs/screenshots/showcase-split-parity.png)](docs/screenshots/showcase-split-parity.png) |
+| **Storage of another array**: the sidebar chooses the array; this one places new files next to their folder, and the advisor says what that means<br>[![Storage of another array](docs/screenshots/arrays-storage.png)](docs/screenshots/arrays-storage.png) | **Pool**: the pools of the machine with branches, protection, placement policy and balance<br>[![Pool](docs/screenshots/pool.png)](docs/screenshots/pool.png) |
+| **Configuration**: the SnapRAID configuration as a form, or as text for the options the form does not have<br>[![Configuration](docs/screenshots/configuration.png)](docs/screenshots/configuration.png) | **Options of an array**: every array has its own schedule, thresholds, scrub plan, spin down, hook and notifications<br>[![Options of an array](docs/screenshots/showcase-settings.png)](docs/screenshots/showcase-settings.png) |
+| **Guided setup, 1**: choose the disks and their role; every disk comes with model and serial<br>[![Guided setup, 1](docs/screenshots/setup-1-disks.png)](docs/screenshots/setup-1-disks.png) | **Guided setup, 2**: filesystem, mount points, pool and its policy<br>[![Guided setup, 2](docs/screenshots/setup-2-options.png)](docs/screenshots/setup-2-options.png) |
+| **Guided setup, 3**: what is going to be done, in order, before anything is erased<br>[![Guided setup, 3](docs/screenshots/setup-3-review.png)](docs/screenshots/setup-3-review.png) | **Create a pool**: any set of mounted disks; the ones without parity are marked<br>[![Create a pool](docs/screenshots/pool-create.png)](docs/screenshots/pool-create.png) |
+| **Replace a disk**: the steps, a warning when the new disk is larger than the parity, and the confirmation to type<br>[![Replace a disk](docs/screenshots/replace-disk.png)](docs/screenshots/replace-disk.png) | **Balance**: what happens and what does not change<br>[![Balance](docs/screenshots/balance.png)](docs/screenshots/balance.png) |
+| **Degraded array**: a disk came back empty: maintenance is suspended and the advisor offers the recovery<br>[![Degraded array](docs/screenshots/degraded.png)](docs/screenshots/degraded.png) | **Recover**: choose the lost disks; fix, check and sync in one command<br>[![Recover](docs/screenshots/recover.png)](docs/screenshots/recover.png) |
+| **Recovery in the Tasks page**: every step with its result<br>[![Recovery in the Tasks page](docs/screenshots/recover-tasks.png)](docs/screenshots/recover-tasks.png) | **Add an array**: a name, and optionally an existing SnapRAID configuration to take over<br>[![Add an array](docs/screenshots/arrays-add.png)](docs/screenshots/arrays-add.png) |
+| **Move a disk to another array**: with its files, step by step, and when the disk has no parity<br>[![Move a disk to another array](docs/screenshots/arrays-move.png)](docs/screenshots/arrays-move.png) |  |
 
-The Arrays picture and the last three are taken from the showcase lab; the others from an
-earlier lab of equal 512 MB disks.
+They are made with `docs/tools/shots.mjs` (Playwright and Chrome) from three states of the lab:
+as it starts (`shots-ready.json`), after `lab scenario dead-disk` (`shots-degraded.json`), and
+started with `LAB_PRESET=blank` (`shots-blank.json`).
 
 ## Versions
 
@@ -329,6 +333,7 @@ SMART changes show up at the next probe (every minute).
 | `hook.sh`, `notify.sh` | what the hook and the notifications of the daemon run in the showcase lab |
 | `lab` | the helper used above |
 | `docs/screenshots/` | the pictures of this page |
+| `docs/tools/` | the script and the lists that take them |
 
 Array and daemon configs live in the `lab` volume, under `/lab/etc`.
 

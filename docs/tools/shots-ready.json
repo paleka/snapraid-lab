@@ -1,0 +1,138 @@
+{
+ "comment": "Lab of docker-compose.yml, healthy and in sync",
+ "shots": [
+  {
+   "name": "overview",
+   "hash": "#/storage",
+   "h": 1100
+  },
+  {
+   "name": "array-and-disks",
+   "hash": "#/storage",
+   "h": 1500,
+   "steps": [
+    {
+     "click": "[data-st=tab][data-tab=array]"
+    }
+   ]
+  },
+  {
+   "name": "pool",
+   "hash": "#/storage",
+   "h": 1390,
+   "steps": [
+    {
+     "click": "[data-st=tab][data-tab=pool]"
+    }
+   ]
+  },
+  {
+   "name": "arrays",
+   "hash": "#/arrays",
+   "h": 1640
+  },
+  {
+   "name": "arrays-storage",
+   "hash": "#/storage",
+   "array": "flash",
+   "h": 1250
+  },
+  {
+   "name": "showcase-disks",
+   "hash": "#/disks",
+   "h": 1270
+  },
+  {
+   "name": "showcase-disks-flash",
+   "hash": "#/disks",
+   "array": "flash",
+   "h": 700
+  },
+  {
+   "name": "showcase-split-parity",
+   "hash": "#/storage",
+   "array": "media",
+   "h": 900
+  },
+  {
+   "name": "showcase-settings",
+   "hash": "#/settings",
+   "array": "media",
+   "h": 1200
+  },
+  {
+   "name": "configuration",
+   "hash": "#/storage",
+   "h": 850,
+   "steps": [
+    {
+     "click": "[data-st=tab][data-tab=config]"
+    }
+   ]
+  },
+  {
+   "name": "pool-create",
+   "hash": "#/storage",
+   "h": 850,
+   "steps": [
+    {
+     "click": "[data-st=tab][data-tab=pool]"
+    },
+    {
+     "click": "[data-st=pool-create]"
+    }
+   ]
+  },
+  {
+   "name": "balance",
+   "hash": "#/storage",
+   "h": 850,
+   "steps": [
+    {
+     "click": "[data-st=tab][data-tab=pool]"
+    },
+    {
+     "click": "[data-st=balance]"
+    }
+   ]
+  },
+  {
+   "name": "arrays-add",
+   "hash": "#/arrays",
+   "h": 1000,
+   "steps": [
+    {
+     "click": "[data-ar=add]"
+    },
+    {
+     "fill": "#ar-name",
+     "value": "archive"
+    }
+   ]
+  },
+  {
+   "name": "arrays-move",
+   "hash": "#/arrays",
+   "h": 1000,
+   "steps": [
+    {
+     "click": "[data-ar=move]"
+    }
+   ]
+  },
+  {
+   "name": "replace-disk",
+   "hash": "#/storage",
+   "array": "media",
+   "h": 1000,
+   "steps": [
+    {
+     "click": "[data-st=tab][data-tab=array]"
+    },
+    {
+     "click": "[data-st=replace][data-name=m2]"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,38 @@
+{
+ "comment": "After `lab scenario dead-disk`, once the array is reported degraded; recover-tasks starts the recovery",
+ "shots": [
+  {
+   "name": "degraded",
+   "hash": "#/storage",
+   "h": 1465
+  },
+  {
+   "name": "recover",
+   "hash": "#/storage",
+   "h": 850,
+   "steps": [
+    {
+     "click": "[data-st=recover]"
+    }
+   ]
+  },
+  {
+   "name": "recover-tasks",
+   "hash": "#/storage",
+   "h": 850,
+   "steps": [
+    {
+     "click": "[data-st=recover]"
+    },
+    {
+     "click": ".btn-danger",
+     "wait": 2500
+    },
+    {
+     "eval": "location.hash='#/tasks'",
+     "wait": 6000
+    }
+   ]
+  }
+ ]
+}
