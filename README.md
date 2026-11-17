@@ -20,6 +20,24 @@ project. For SnapRAID itself see its [manual](https://www.snapraid.it/manual) an
 
 The lab and the fork were written with the help of an AI coding assistant (Claude).
 
+## Screenshots
+
+![Tour of the Storage page](docs/screenshots/tour.gif)
+
+The Storage page inside SnapRAID Commander, the web UI of SnapRAID Daemon by Andrea Mazzoleni.
+Everything outside the Storage page, and the look of the UI, is his work. The pictures are taken
+from this lab: the disks are 512 MB loop devices.
+
+| | |
+|---|---|
+| **Overview**: layout of the array and of the pool, and the advisor<br>[![Overview](docs/screenshots/overview.png)](docs/screenshots/overview.png) | **Array & disks**: every disk, with replace, remove and format<br>[![Array and disks](docs/screenshots/array-and-disks.png)](docs/screenshots/array-and-disks.png) |
+| **Pool**: mergerfs branches, policy, balance, duplicates, file browser<br>[![Pool](docs/screenshots/pool.png)](docs/screenshots/pool.png) | **Configuration**: the SnapRAID configuration, as a form or as text<br>[![Configuration](docs/screenshots/configuration.png)](docs/screenshots/configuration.png) |
+| **Guided setup, 1**: choose the disks and their role<br>[![Guided setup, disks](docs/screenshots/setup-1-disks.png)](docs/screenshots/setup-1-disks.png) | **Guided setup, 2**: options<br>[![Guided setup, options](docs/screenshots/setup-2-options.png)](docs/screenshots/setup-2-options.png) |
+| **Guided setup, 3**: review of what is going to be done, before anything is erased<br>[![Guided setup, review](docs/screenshots/setup-3-review.png)](docs/screenshots/setup-3-review.png) | **Create a pool**<br>[![Create a pool](docs/screenshots/pool-create.png)](docs/screenshots/pool-create.png) |
+| **Replace a disk**: the steps, and the confirmation to type<br>[![Replace a disk](docs/screenshots/replace-disk.png)](docs/screenshots/replace-disk.png) | **Balance**: what happens and what does not change<br>[![Balance](docs/screenshots/balance.png)](docs/screenshots/balance.png) |
+| **Degraded array**: a disk came back empty<br>[![Degraded array](docs/screenshots/degraded.png)](docs/screenshots/degraded.png) | **Recover**: fix, check and sync in one command<br>[![Recover](docs/screenshots/recover.png)](docs/screenshots/recover.png) |
+| **Recovery in the Tasks page**<br>[![Recovery tasks](docs/screenshots/recover-tasks.png)](docs/screenshots/recover-tasks.png) | |
+
 ## Versions
 
 | What | Version |
@@ -138,6 +156,7 @@ SMART changes show up at the next probe (every minute).
 | `entrypoint.sh` | creates and mounts the disks, writes the configs, starts `snapraidd` |
 | `fake-smartctl`, `smartctl-launcher.c` | SMART emulation (SnapRAID only runs real binaries, hence the launcher) |
 | `lab` | the helper used above |
+| `docs/screenshots/` | the pictures of this page |
 
 Array and daemon configs live in the `lab` volume: `/lab/etc/snapraid.conf`, `/lab/etc/snapraidd.conf`.
 
