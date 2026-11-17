@@ -8,6 +8,9 @@ LAB=$LAB_DIR
 DATA=${LAB_DATA_DISKS:-4}
 PARITY=${LAB_PARITY_DISKS:-2}
 SPARE=${LAB_SPARE_DISKS:-2}
+MEDIA=${LAB_MEDIA_DATA_DISKS:-0}   # data disks (m1..mN) of a second array named "media", with one parity disk (q1)
+SCRATCH=${LAB_SCRATCH_DISKS:-0}    # disks (x1..xN) formatted and mounted, but in no array
+POOLS=${LAB_POOLS:-0}              # 1: a mergerfs pool for every array, and one for the scratch disks
 SIZE=${LAB_DISK_SIZE_MB:-512}
 SIZES=${LAB_DISK_SIZES:-}          # per-disk sizes in MB, e.g. "d1=256 d3=1024 p1=1024 s1=2048"; the others get LAB_DISK_SIZE_MB
 UI=${LAB_UI:-commander}
@@ -25,6 +28,11 @@ if [ ! -f $LAB/etc/lab-disks ]; then
         for i in $(seq 1 "$DATA"); do echo "d$i"; done
         for i in $(seq 1 "$PARITY"); do echo "p$i"; done
         for i in $(seq 1 "$SPARE"); do echo "s$i"; done
+        if [ "$MEDIA" -gt 0 ]; then
+            for i in $(seq 1 "$MEDIA"); do echo "m$i"; done
+            echo "q1"
+        fi
+        for i in $(seq 1 "$SCRATCH"); do echo "x$i"; done
     } > $LAB/etc/lab-disks
     echo "$PRESET" > $LAB/etc/lab-preset
     echo "$SIZES" > $LAB/etc/lab-sizes
@@ -121,7 +129,7 @@ attach() { # name [prepared] -> sets LOOP, and FRESH=1 when the image was just c
 fresh_disks=()
 for d in "${disks[@]}"; do
     prepared=
-    case $d in d*|p*) [ "$PRESET" = ready ] && prepared=prepared ;; esac
+    case $d in d*|p*|m*|q*|x*) [ "$PRESET" = ready ] && prepared=prepared ;; esac
     if [ $mode = loop ] && attach "$d" $prepared; then
         if [ -n "$prepared" ]; then
             if [ $FRESH = 1 ]; then
@@ -147,6 +155,23 @@ for d in "${disks[@]}"; do
     fi
 done
 log "disks ready ($mode mode, preset $PRESET): ${disks[*]}"
+
+# One pool for every array and one for the disks of no array, made once: then they are yours and of the UI.
+if [ "$PRESET" = ready ] && [ "$POOLS" = 1 ] && [ $mode = loop ] && command -v mergerfs >/dev/null && [ ! -f $LAB/etc/lab-pools ]; then
+    touch $LAB/etc/lab-pools
+    # through the helper of FUSE, that drops "nofail" before mergerfs sees it
+    fstype=fuse.mergerfs; command -v mount.fuse >/dev/null || { command -v mount.mergerfs >/dev/null && fstype=mergerfs; }
+    add_pool() { # mountpoint prefix
+        local branches=
+        for d in "${disks[@]}"; do case $d in $2*) branches="${branches:+$branches:}/mnt/lab/$d" ;; esac; done
+        [ -n "$branches" ] || return
+        mkdir -p "$1"
+        echo "$branches $1 $fstype cache.files=off,category.create=pfrd,minfreespace=10M,fsname=mergerfs,allow_other,nofail 0 0" >> $LAB/etc/fstab
+    }
+    add_pool /mnt/storage d
+    add_pool /mnt/media m
+    add_pool /mnt/scratch x
+fi
 
 # Whatever was set up from the UI in a previous run.
 mount -a 2>&1 | sed 's/^/[lab] mount: /'
@@ -187,6 +212,34 @@ if [ "$PRESET" = ready ] && [ ! -f $LAB/etc/snapraid.conf ]; then
         echo "autosave 1"
     } > $LAB/etc/snapraid.conf
 fi
+# The second array: its SnapRAID configuration, and its own daemon options in the arrays directory.
+has_media=0; for d in "${disks[@]}"; do [ "$d" = m1 ] && has_media=1; done
+if [ "$PRESET" = ready ] && [ $has_media = 1 ] && [ ! -f $LAB/etc/snapraid/media.conf ]; then
+    mkdir -p $LAB/etc/snapraid $LAB/etc/snapraidd.d
+    {
+        echo "# SnapRAID lab, second array"
+        echo "parity /mnt/lab/q1/snapraid.parity"
+        echo "content $LAB/etc/media.content"
+        echo "content /mnt/lab/m1/snapraid.content"
+        for d in "${disks[@]}"; do case $d in m*) echo "data $d /mnt/lab/$d" ;; esac; done
+        echo "exclude *.tmp"; echo "exclude /lost+found/"
+        echo "autosave 1"
+    } > $LAB/etc/snapraid/media.conf
+    cat > $LAB/etc/snapraidd.d/media.conf <<CONF
+# SnapRAID Daemon lab, options of the array 'media' (the ones of the machine are in snapraidd.conf)
+engine_conf = $LAB/etc/snapraid/media.conf
+maintenance_schedule = 03:00
+sync_threshold_deletes = 50
+sync_threshold_updates = 100
+scrub_percentage = 12
+scrub_older_than = 10
+touch_zero_subseconds = 1
+probe_interval_minutes = 1
+spindown_idle_minutes = 15
+notify_result_level = warning
+notify_differences = 1
+CONF
+fi
 if [ ! -f $LAB/etc/snapraidd.conf ]; then
     cat > $LAB/etc/snapraidd.conf <<CONF
 # SnapRAID Daemon lab configuration (see snapraidd.conf.example for every option)
@@ -224,10 +277,18 @@ grep -q '^net_storage_admin' $LAB/etc/snapraidd.conf || sed -i 's|^net_web_root 
 sed -i "s|^net_web_root = .*|net_web_root = /ui/$UI|" $LAB/etc/snapraidd.conf
 
 # Sample content on new data disks, a first sync, then some changes left pending.
-seeded=0
+seeded=0; seeded_media=0
 for d in "${fresh_disks[@]}"; do
-    case $d in d*) lab seed "$d"; seeded=1 ;; esac
+    case $d in
+    d*) lab seed "$d"; seeded=1 ;;
+    m*) lab seed "$d"; seeded_media=1 ;;
+    x*) lab fill "/mnt/lab/$d" 40 >/dev/null ;;
+    esac
 done
+if [ $seeded_media = 1 ] && [ ! -f $LAB/etc/media.content ] && [ -f $LAB/etc/snapraid/media.conf ]; then
+    log "first sync of the second array"
+    snapraid -c $LAB/etc/snapraid/media.conf -q sync >/dev/null 2>$LAB/log/first-sync-media.err || log "first sync of the second array failed, see $LAB/log/first-sync-media.err"
+fi
 if [ $seeded = 1 ] && [ ! -f $LAB/etc/snapraid.content ]; then
     log "first sync of the new array"
     snapraid -c $LAB/etc/snapraid.conf -q sync >/dev/null 2>$LAB/log/first-sync.err || log "first sync failed, see $LAB/log/first-sync.err"

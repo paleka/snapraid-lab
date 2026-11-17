@@ -20,6 +20,9 @@ services:
       LAB_PARITY_DISKS: "2"      # number of parity disks (1..6)
       LAB_SPARE_DISKS: "2"       # extra blank disks (s1..sN), for adding and replacing from the UI
       LAB_DISK_SIZE_MB: "512"    # size of every emulated disk
+      LAB_MEDIA_DATA_DISKS: "2"  # data disks (m1..mN) of a second array "media" with its own parity disk (q1); 0 for one array only
+      LAB_SCRATCH_DISKS: "1"     # disks (x1..xN) mounted but in no array
+      LAB_POOLS: "1"             # 1: three pools, /mnt/storage and /mnt/media over the two arrays, /mnt/scratch over the disks of no array
       LAB_PRESET: "${LAB_PRESET:-ready}"        # ready: array already built | blank: only empty disks, build it with the guided setup
       LAB_UI: "commander"        # commander | brutale
     volumes:
