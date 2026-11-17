@@ -36,7 +36,9 @@ seed)
     while [ $used -lt $target_kb ]; do
         k=$(rnd 0 6); mkdir -p "$d/${dirs[$k]}"
         case $k in 0|6) kb=$(rnd 4000 20000) ;; 1) kb=$(rnd 800 6000) ;; 2|3) kb=$(rnd 150 900) ;; *) kb=$(rnd 4 200) ;; esac
-        head -c "${kb}K" /dev/urandom > "$d/${dirs[$k]}/$2-$(printf '%04d' $i).${exts[$k]}"
+        f="$d/${dirs[$k]}/$2-$(printf '%04d' $i).${exts[$k]}"
+        head -c "${kb}K" /dev/urandom > "$f"
+        touch -d "@$(( $(date +%s) - $(rnd 86400 77760000) ))" "$f"   # a library collected over the years, not written just now
         used=$((used + kb)); i=$((i + 1))
     done
     echo "[lab] seeded $2 with $i files ($((used / 1024)) MiB)" ;;

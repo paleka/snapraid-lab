@@ -1,0 +1,30 @@
+# Tests an array made of disks of different sizes: recovery of the largest and the smallest disk,
+# a split parity, a pool balanced by fill level, a data disk larger than the parity.
+#
+#     docker compose -f docker-compose.sizes.yml up --build --abort-on-container-exit --exit-code-from tests
+#     docker compose -f docker-compose.sizes.yml down -v
+name: snapraid-lab-sizes
+services:
+  tests:
+    build:
+      context: .
+      additional_contexts:
+        daemon: ${DAEMON_SRC:-../snapraid-daemon}
+    container_name: snapraid-lab-sizes
+    privileged: true
+    init: true
+    environment:
+      LAB_PRESET: "ready"
+      LAB_DATA_DISKS: "4"
+      LAB_PARITY_DISKS: "2"
+      LAB_SPARE_DISKS: "4"
+      # the test checks this exact layout before touching anything
+      LAB_DISK_SIZES: "d1=256 d2=512 d3=1024 d4=384 p1=1024 p2=1024 s1=2048 s2=128 s3=640 s4=640"
+      LAB_RUN_TESTS: "1"
+      LAB_TEST: "mixed-size-test.sh"
+    volumes:
+      - sizeslab:/lab
+      - ${DAEMON_SRC:-../snapraid-daemon}/commander:/ui/commander
+      - ${DAEMON_SRC:-../snapraid-daemon}/brutale:/ui/brutale
+volumes:
+  sizeslab:

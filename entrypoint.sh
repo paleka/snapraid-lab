@@ -9,6 +9,7 @@ DATA=${LAB_DATA_DISKS:-4}
 PARITY=${LAB_PARITY_DISKS:-2}
 SPARE=${LAB_SPARE_DISKS:-2}
 SIZE=${LAB_DISK_SIZE_MB:-512}
+SIZES=${LAB_DISK_SIZES:-}          # per-disk sizes in MB, e.g. "d1=256 d3=1024 p1=1024 s1=2048"; the others get LAB_DISK_SIZE_MB
 UI=${LAB_UI:-commander}
 PRESET=${LAB_PRESET:-ready}        # ready: array already set up | blank: only empty disks, set it up from the UI
 PARITY_NAMES=(parity 2-parity 3-parity 4-parity 5-parity 6-parity)
@@ -26,7 +27,9 @@ if [ ! -f $LAB/etc/lab-disks ]; then
         for i in $(seq 1 "$SPARE"); do echo "s$i"; done
     } > $LAB/etc/lab-disks
     echo "$PRESET" > $LAB/etc/lab-preset
+    echo "$SIZES" > $LAB/etc/lab-sizes
 fi
+[ -f $LAB/etc/lab-sizes ] && SIZES=$(cat $LAB/etc/lab-sizes)
 mapfile -t disks < $LAB/etc/lab-disks
 PRESET=$(cat $LAB/etc/lab-preset)
 
@@ -87,12 +90,18 @@ nodes() { # loop device
     done
 }
 
+size_of() { # disk name -> size in MB
+    local kv
+    for kv in ${SIZES//,/ }; do [ "${kv%%=*}" = "$1" ] && { echo "${kv#*=}"; return; }; done
+    echo "$SIZE"
+}
+
 mode=loop
 attach() { # name [prepared] -> sets LOOP, and FRESH=1 when the image was just created
     local name=$1 img=$LAB/img/$1.img base
     FRESH=0
     if [ ! -f "$img" ]; then
-        truncate -s "${SIZE}M" "$img"
+        truncate -s "$(size_of "$name")M" "$img"
         # A partition table makes the disk look like a real one: SnapRAID resolves
         # the filesystem on loopNp1 back to the "physical" device loopN.
         [ "${2:-}" = prepared ] && { mbr "$img" || return 1; }
@@ -132,7 +141,7 @@ for d in "${disks[@]}"; do
         fi
         case $d in s*) continue ;; esac
         mkdir -p "/mnt/lab/$d"
-        mountpoint -q "/mnt/lab/$d" || mount -t tmpfs -o "size=${SIZE}M" "lab-$d" "/mnt/lab/$d" \
+        mountpoint -q "/mnt/lab/$d" || mount -t tmpfs -o "size=$(size_of "$d")M" "lab-$d" "/mnt/lab/$d" \
             || { log "ERROR: cannot mount anything; run the container with privileged: true"; exit 1; }
         fresh_disks+=("$d")
     fi
@@ -231,7 +240,7 @@ snapraidd -f -N -c $LAB/etc/snapraidd.conf -C $LAB/etc/snapraid.conf -p /run/sna
 DAEMON_PID=$!
 if [ "${LAB_RUN_TESTS:-0}" = 1 ]; then
     # run the API tests against this lab, then stop with their result
-    /usr/local/share/lab/tests/api-test.sh
+    /usr/local/share/lab/tests/${LAB_TEST:-api-test.sh}
     rc=$?
     log "tests ended with $rc failures"
     kill "$DAEMON_PID" 2>/dev/null; wait "$DAEMON_PID" 2>/dev/null

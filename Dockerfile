@@ -47,6 +47,6 @@ COPY fake-smartctl /usr/libexec/lab/fake-smartctl
 COPY entrypoint.sh /usr/local/bin/lab-entrypoint
 COPY lab /usr/local/bin/lab
 COPY tests /usr/local/share/lab/tests
-RUN chmod +x /usr/libexec/lab/fake-smartctl /usr/local/bin/lab-entrypoint /usr/local/bin/lab /usr/local/share/lab/tests/api-test.sh
+RUN chmod +x /usr/libexec/lab/fake-smartctl /usr/local/bin/lab-entrypoint /usr/local/bin/lab /usr/local/share/lab/tests/*.sh
 EXPOSE 7627
 ENTRYPOINT ["/usr/local/bin/lab-entrypoint"]
