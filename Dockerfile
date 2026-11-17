@@ -38,15 +38,18 @@ RUN cd /build-daemon && make check
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        zlib1g e2fsprogs xfsprogs fdisk util-linux mergerfs fuse3 rsync attr jq procps curl ca-certificates && rm -rf /var/lib/apt/lists/*
+        zlib1g e2fsprogs xfsprogs btrfs-progs fdisk util-linux mergerfs fuse3 rsync attr jq procps curl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=build /build-engine/snapraid /usr/bin/snapraid
 COPY --from=build /build-daemon/snapraidd /usr/sbin/snapraidd
 COPY --from=build /build-daemon/commander.zip /build-daemon/brutale.zip /usr/share/snapraidd/
 COPY --from=build /smartctl /usr/sbin/smartctl
 COPY fake-smartctl /usr/libexec/lab/fake-smartctl
+# In front of the real lsblk (/usr/bin) in the search path of the daemon: it gives the emulated disks a model and a bus.
+COPY fake-lsblk /usr/sbin/lsblk
+COPY hook.sh notify.sh /usr/local/share/lab/
 COPY entrypoint.sh /usr/local/bin/lab-entrypoint
 COPY lab /usr/local/bin/lab
 COPY tests /usr/local/share/lab/tests
-RUN chmod +x /usr/libexec/lab/fake-smartctl /usr/local/bin/lab-entrypoint /usr/local/bin/lab /usr/local/share/lab/tests/*.sh
+RUN chmod 755 /usr/libexec/lab/fake-smartctl /usr/sbin/lsblk /usr/local/share/lab/hook.sh /usr/local/share/lab/notify.sh /usr/local/bin/lab-entrypoint /usr/local/bin/lab /usr/local/share/lab/tests/*.sh
 EXPOSE 7627
 ENTRYPOINT ["/usr/local/bin/lab-entrypoint"]

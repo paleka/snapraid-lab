@@ -1,0 +1,32 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Robert Paleka
+# lsblk for the SnapRAID lab: the real lsblk, with the emulated disks described like the real
+# disks they stand for. A loop device has no model, no serial and no bus; here they come from
+# the same profile the fake smartctl answers from (${LAB_DIR:-/lab}/smart/<disk>.env), so the
+# Storage page shows an HDD, an SSD, an NVMe or a removable USB disk and not "loop device".
+# Only the JSON output is changed.
+real=/usr/bin/lsblk
+case " $* " in *" --json "*|*" -J "*) ;; *) exec $real "$@" ;; esac
+command -v jq >/dev/null || exec $real "$@"
+
+map='{}'
+for f in /run/lab/map/*; do
+    [ -f "$f" ] || continue
+    name=$(cat "$f"); env="${LAB_DIR:-/lab}/smart/$name.env"
+    [ -f "$env" ] || continue
+    MODEL=; SERIAL=; RPM=7200; TRAN=sata; REMOVABLE=0
+    . "$env"
+    rota=true; [ "$RPM" = 0 ] && rota=false
+    rm=false; [ "$REMOVABLE" = 1 ] && rm=true
+    map=$(jq -c --arg k "$(basename "$f")" --arg model "$MODEL" --arg serial "$SERIAL" --arg tran "$TRAN" \
+        --argjson rota "$rota" --argjson rm "$rm" \
+        '.[$k] = {model: $model, serial: $serial, tran: $tran, rota: $rota, rm: $rm}' <<< "$map")
+done
+
+out=$($real "$@") || exit $?
+jq --argjson m "$map" '
+    def fix: if type == "object" and has("name") and ($m[.name] != null) then
+            . as $d | reduce ($m[.name] | to_entries[]) as $e ($d; if has($e.key) then .[$e.key] = $e.value else . end)
+        else . end;
+    .blockdevices |= map(fix)' <<< "$out" 2>/dev/null || echo "$out"

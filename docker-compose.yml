@@ -2,6 +2,12 @@
 #
 # DAEMON_SRC is the checkout of https://github.com/paleka/snapraid-daemon (branch storage).
 # By default it is expected next to this folder.
+#
+# This is the showcase lab: three arrays, four pools, disks of different sizes, kinds and
+# filesystems, and configurations that use most options of SnapRAID and of its daemon.
+# The README has the table of what is where. A small lab with one plain array:
+#
+#     docker compose -f docker-compose.simple.yml up --build
 name: snapraid-lab
 services:
   snapraid:
@@ -16,15 +22,41 @@ services:
     ports:
       - "127.0.0.1:7627:7627"
     environment:
-      LAB_DATA_DISKS: "4"        # number of data disks (d1..dN)
-      LAB_PARITY_DISKS: "2"      # number of parity disks (1..6)
-      LAB_SPARE_DISKS: "2"       # extra blank disks (s1..sN), for adding and replacing from the UI
-      LAB_DISK_SIZE_MB: "512"    # size of every emulated disk
-      LAB_MEDIA_DATA_DISKS: "2"  # data disks (m1..mN) of a second array "media" with its own parity disk (q1); 0 for one array only
-      LAB_SCRATCH_DISKS: "1"     # disks (x1..xN) mounted but in no array
-      LAB_POOLS: "1"             # 1: three pools, /mnt/storage and /mnt/media over the two arrays, /mnt/scratch over the disks of no array
-      LAB_PRESET: "${LAB_PRESET:-ready}"        # ready: array already built | blank: only empty disks, build it with the guided setup
-      LAB_UI: "commander"        # commander | brutale
+      LAB_PRESET: "${LAB_PRESET:-ready}"   # ready: arrays already built | blank: only empty disks, build them with the guided setup
+      LAB_UI: "${LAB_UI:-commander}"       # commander | brutale
+      LAB_AUTH: "${LAB_AUTH:-}"            # user:password to try the login of the daemon; empty: no login
+
+      # Array "default": mixed disks, two parity levels
+      LAB_DATA_DISKS: "4"            # data disks d1..dN
+      LAB_PARITY_DISKS: "2"          # parity disks p1..pN (1..6): parity, 2-parity, ...
+      LAB_SPARE_DISKS: "2"           # blank disks s1..sN, for adding and replacing from the UI
+      # Array "media": large disks, one parity level split over two smaller disks
+      LAB_MEDIA_DATA_DISKS: "2"      # data disks m1..mN, parity q1; 0: no such array
+      LAB_MEDIA_SPLIT_PARITY: "1"    # 1: the parity is split over q1 and q2
+      # Array "flash": NVMe and SSD on Btrfs, synced from snapshots
+      LAB_FLASH_DATA_DISKS: "3"      # data disks f1..fN, parity g1; 0: no such array
+      # Outside the arrays
+      LAB_SCRATCH_DISKS: "1"         # x1..xN: mounted, pooled in /mnt/scratch, no parity
+      LAB_USB_DISKS: "1"             # u1..uN: mounted on their own, no pool, no parity
+      LAB_POOLS: "1"                 # 1: a mergerfs pool over the data disks of every array, and /mnt/scratch
+
+      LAB_DISK_SIZE_MB: "512"        # size of the disks not named below
+      LAB_DISK_SIZES: >-
+        d1=256 d2=512 d3=768 d4=384 p1=1024 p2=1024 s1=2048 s2=320
+        m1=1024 m2=768 q1=256 q2=768
+        f1=384 f2=384 f3=512 g1=640
+        x1=256 u1=512
+      # hdd | smr | ssd | nvme | sas | usb
+      LAB_DISK_TYPES: >-
+        d1=hdd d2=smr d3=sas d4=ssd p1=hdd p2=hdd s1=hdd s2=usb
+        m1=hdd m2=smr q1=hdd q2=hdd
+        f1=nvme f2=nvme f3=ssd g1=nvme
+        x1=ssd u1=usb
+      # ext4 (default) | xfs | btrfs
+      LAB_DISK_FS: "d2=xfs d4=btrfs m1=xfs m2=xfs f1=btrfs f2=btrfs f3=btrfs"
+      # 1: the configurations use the less common options too (extra, nohidden, temp_limit, pool,
+      # smartctl, smartignore, snapshot; hook, notifications, prehash, compressed logs, ...)
+      LAB_SHOWCASE: "1"
     volumes:
       # Disk images, array config, logs. `docker compose down -v` resets the lab.
       - lab:/lab

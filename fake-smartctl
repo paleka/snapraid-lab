@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Robert Paleka
 # Fake smartctl for the SnapRAID lab.
-# SnapRAID calls:  smartctl [-n standby,3] -a /dev/loopN     (probe / smart)
-#                  smartctl -s standby,now /dev/loopN         (spin down)
-# The answer comes from the profile ${LAB_DIR:-/lab}/smart/<disk>.env of the disk mounted from that loop device.
+# SnapRAID calls:  smartctl [-n standby,3] -a [options of 'smartctl' in snapraid.conf] /dev/loopN   (probe / smart)
+#                  smartctl -s standby,now /dev/loopN                                                (spin down)
+# The answer comes from the profile ${LAB_DIR:-/lab}/smart/<disk>.env of the disk mounted from that loop device,
+# in the format smartctl uses for that kind of disk: KIND=ata (SATA disks and SSDs, USB bridges),
+# KIND=nvme, KIND=scsi (SAS). SnapRAID reads all three.
 dev="${@: -1}"
 loop="$(basename "$dev")"
 name="$(cat "/run/lab/map/$loop" 2>/dev/null)"
@@ -12,10 +14,13 @@ if [ -z "$name" ] || [ ! -f "${LAB_DIR:-/lab}/smart/$name.env" ]; then
     echo "Smartctl open device: $dev failed: No such device"
     exit 2
 fi
+# the last command line received for this disk, to see the options of 'smartctl' of snapraid.conf at work
+mkdir -p /run/lab/args && echo "$*" > "/run/lab/args/$name"
 # defaults, overridden by the profile
-MODEL="LAB Virtual Disk"; FAMILY="SnapRAID Lab"; SERIAL="LAB-$name"; RPM=7200; TEMP=34
+KIND=ata; MODEL="LAB Virtual Disk"; FAMILY="SnapRAID Lab"; SERIAL="LAB-$name"; RPM=7200; TEMP=34
 POWER_ON_HOURS=1000; START_STOP=50; LOAD_CYCLE=500; POWER_CYCLE=50
 REALLOCATED=0; PENDING=0; UNCORRECTABLE=0; CRC_ERRORS=0; REPORTED_UNCORRECT=0; WEAR_LEVEL=""
+WEAR_USED=2; SPARE=100; MEDIA_ERRORS=0; ERROR_LOG=0; UNSAFE_SHUTDOWNS=4; NON_MEDIUM_ERRORS=0
 . "${LAB_DIR:-/lab}/smart/$name.env"
 
 stat_now="$(awk '{print $1+$5}' "/sys/block/$loop/stat" 2>/dev/null)"
@@ -40,24 +45,124 @@ if [ -f "$standby_file" ]; then
 fi
 
 bytes="$(( $(cat "/sys/block/$loop/size" 2>/dev/null || echo 0) * 512 ))"
+group() { echo "$1" | sed ':a;s/\B[0-9]\{3\}\>/,&/;ta'; }   # 1234567 -> 1,234,567
 # small temperature drift so the charts are not flat
 temp=$(( TEMP + ( ($(date +%s) / 120 + ${#name} + ${#SERIAL}) % 3 ) ))
 health=PASSED; rc=0
 [ "${FAILING:-0}" = 1 ] && { health="FAILED!"; rc=8; }
 
-cat <<OUT
-smartctl 7.4 (lab emulation) [$(uname -m)-linux] (local build)
+echo "smartctl 7.4 (lab emulation) [$(uname -m)-linux] (local build)"
+echo
 
+case $KIND in
+nvme)
+    warning=0x00; [ "${FAILING:-0}" = 1 ] && warning=0x04
+    cat <<OUT
+=== START OF INFORMATION SECTION ===
+Model Number:                       $MODEL
+Device Model:     $MODEL
+Serial Number:                      $SERIAL
+Firmware Version:                   LAB1.0
+PCI Vendor/Subsystem ID:            0x144d
+IEEE OUI Identifier:                0x002538
+Total NVM Capacity:                 $(group "$bytes") [lab]
+Unallocated NVM Capacity:           0
+Controller ID:                      6
+NVMe Version:                       1.4
+Number of Namespaces:               1
+Namespace 1 Size/Capacity:          $(group "$bytes") [lab]
+Namespace 1 Formatted LBA Size:     512
+User Capacity:    $(group "$bytes") bytes
+
+=== START OF SMART DATA SECTION ===
+SMART overall-health self-assessment test result: $health
+
+SMART/Health Information (NVMe Log 0x02)
+Critical Warning:                   $warning
+Temperature:                        $temp Celsius
+Available Spare:                    $SPARE%
+Available Spare Threshold:          10%
+Percentage Used:                    $WEAR_USED%
+Data Units Read:                    $(group $((POWER_ON_HOURS * 5120 + 213006))) [lab]
+Data Units Written:                 $(group $((POWER_ON_HOURS * 9216 + 549370))) [lab]
+Host Read Commands:                 $(group $((POWER_ON_HOURS * 181000 + 11210)))
+Host Write Commands:                $(group $((POWER_ON_HOURS * 263000 + 20687)))
+Controller Busy Time:               $(group $((POWER_ON_HOURS / 3 + 1)))
+Power Cycles:                       $POWER_CYCLE
+Power On Hours:                     $(group "$POWER_ON_HOURS")
+Unsafe Shutdowns:                   $UNSAFE_SHUTDOWNS
+Media and Data Integrity Errors:    $MEDIA_ERRORS
+Error Information Log Entries:      $ERROR_LOG
+Warning  Comp. Temperature Time:    0
+Critical Comp. Temperature Time:    0
+Temperature Sensor 1:               $temp Celsius
+Temperature Sensor 2:               $((temp + 9)) Celsius
+
+OUT
+    ;;
+scsi)
+    status=OK; [ "${FAILING:-0}" = 1 ] && status="FAILURE PREDICTION THRESHOLD EXCEEDED"
+    cat <<OUT
+=== START OF INFORMATION SECTION ===
+Vendor:               ${MODEL%% *}
+Product:              ${MODEL#* }
+Device Model:     $MODEL
+Revision:             LAB1
+Compliance:           SPC-4
+User Capacity:        $(group "$bytes") bytes
+Logical block size:   512 bytes
+Physical block size:  4096 bytes
+Rotation Rate:        $RPM rpm
+Form Factor:          3.5 inches
+Logical Unit id:      0x5000cca2$(printf '%08x' $(( ${#SERIAL} * 7919 + ${#name} )))
+Serial number:        $SERIAL
+Device type:          disk
+Transport protocol:   SAS (SPL-4)
+SMART support is:     Available - device has SMART capability.
+SMART support is:     Enabled
+Temperature Warning:  Enabled
+
+=== START OF READ SMART DATA SECTION ===
+SMART Health Status: $status
+
+Current Drive Temperature:     $temp C
+Drive Trip Temperature:        85 C
+
+Accumulated power on time, hours:minutes $POWER_ON_HOURS:12
+Manufactured in week 25 of year 2021
+Specified cycle count over device lifetime:  50000
+Accumulated start-stop cycles:  $START_STOP
+Specified load-unload count over device lifetime:  600000
+Accumulated load-unload cycles:  $LOAD_CYCLE
+Elements in grown defect list: $REALLOCATED
+
+Vendor (Seagate/Hitachi) factory information
+  number of hours powered up = $POWER_ON_HOURS.20
+  number of minutes until next internal SMART test = 42
+
+Error counter log:
+           Errors Corrected by           Total   Correction     Gigabytes    Total
+               ECC          rereads/    errors   algorithm      processed    uncorrected
+           fast | delayed   rewrites  corrected  invocations   [10^9 bytes]  errors
+read:          0        0         0         0      81222      24120.404           $UNCORRECTABLE
+write:         0        0         0         0      12043      11385.611           0
+
+Non-medium error count:        $NON_MEDIUM_ERRORS
+
+OUT
+    ;;
+*)
+    cat <<OUT
 === START OF INFORMATION SECTION ===
 Model Family:     $FAMILY
 Device Model:     $MODEL
 Serial Number:    $SERIAL
 Firmware Version: LAB1.0
-User Capacity:    $bytes bytes
+User Capacity:    $(group "$bytes") bytes
 Sector Sizes:     512 bytes logical, 4096 bytes physical
 OUT
-if [ "$RPM" = 0 ]; then echo "Rotation Rate:    Solid State Device"; else echo "Rotation Rate:    $RPM rpm"; fi
-cat <<OUT
+    if [ "$RPM" = 0 ]; then echo "Rotation Rate:    Solid State Device"; else echo "Rotation Rate:    $RPM rpm"; fi
+    cat <<OUT
 ATA Version is:   ACS-3 T13/2161-D revision 5
 SATA Version is:  SATA 3.3, 6.0 Gb/s (current: 6.0 Gb/s)
 SMART support is: Available - device has SMART capability.
@@ -70,21 +175,31 @@ SMART Attributes Data Structure revision number: 16
 Vendor Specific SMART Attributes with Thresholds:
 ID# ATTRIBUTE_NAME          FLAG     VALUE WORST THRESH TYPE      UPDATED  WHEN_FAILED RAW_VALUE
   1 Raw_Read_Error_Rate     0x002f   200   200   051    Pre-fail  Always       -       0
-  3 Spin_Up_Time            0x0027   172   169   021    Pre-fail  Always       -       8383
+OUT
+    [ "$RPM" != 0 ] && echo "  3 Spin_Up_Time            0x0027   172   169   021    Pre-fail  Always       -       8383"
+    cat <<OUT
   4 Start_Stop_Count        0x0032   100   100   000    Old_age   Always       -       $START_STOP
   5 Reallocated_Sector_Ct   0x0033   200   200   140    Pre-fail  Always       -       $REALLOCATED
-  7 Seek_Error_Rate         0x002e   200   200   000    Old_age   Always       -       0
+OUT
+    [ "$RPM" != 0 ] && echo "  7 Seek_Error_Rate         0x002e   200   200   000    Old_age   Always       -       0"
+    cat <<OUT
   9 Power_On_Hours          0x0032   083   083   000    Old_age   Always       -       $POWER_ON_HOURS
- 10 Spin_Retry_Count        0x0032   100   253   000    Old_age   Always       -       0
+OUT
+    [ "$RPM" != 0 ] && echo " 10 Spin_Retry_Count        0x0032   100   253   000    Old_age   Always       -       0"
+    cat <<OUT
  12 Power_Cycle_Count       0x0032   100   100   000    Old_age   Always       -       $POWER_CYCLE
 187 Reported_Uncorrect      0x0032   100   100   000    Old_age   Always       -       $REPORTED_UNCORRECT
-193 Load_Cycle_Count        0x0032   157   157   000    Old_age   Always       -       $LOAD_CYCLE
+OUT
+    [ "$RPM" != 0 ] && echo "193 Load_Cycle_Count        0x0032   157   157   000    Old_age   Always       -       $LOAD_CYCLE"
+    cat <<OUT
 194 Temperature_Celsius     0x0022   127   119   000    Old_age   Always       -       $temp
 196 Reallocated_Event_Count 0x0032   200   200   000    Old_age   Always       -       $REALLOCATED
 197 Current_Pending_Sector  0x0032   200   200   000    Old_age   Always       -       $PENDING
 198 Offline_Uncorrectable   0x0030   100   253   000    Old_age   Offline      -       $UNCORRECTABLE
 199 UDMA_CRC_Error_Count    0x0032   200   200   000    Old_age   Always       -       $CRC_ERRORS
 OUT
-[ -n "$WEAR_LEVEL" ] && echo "177 Wear_Leveling_Count     0x0013   $WEAR_LEVEL   $WEAR_LEVEL   000    Pre-fail  Always       -       12"
-echo
+    [ -n "$WEAR_LEVEL" ] && echo "177 Wear_Leveling_Count     0x0013   $WEAR_LEVEL   $WEAR_LEVEL   000    Pre-fail  Always       -       12"
+    echo
+    ;;
+esac
 exit $rc

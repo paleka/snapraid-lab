@@ -1,0 +1,19 @@
+# Checks the showcase lab: the same disks and options of docker-compose.yml, then
+# tests/showcase-test.sh on them. It uses the port of the lab: stop the lab first.
+#
+#     docker compose -f docker-compose.showcase.yml up --build --abort-on-container-exit --exit-code-from tests
+#     docker compose -f docker-compose.showcase.yml down -v
+name: snapraid-lab-showcase
+services:
+  tests:
+    extends:
+      file: docker-compose.yml
+      service: snapraid
+    container_name: snapraid-lab-showcase
+    environment:
+      LAB_PRESET: "ready"
+      LAB_AUTH: ""
+      LAB_RUN_TESTS: "1"
+      LAB_TEST: "showcase-test.sh"
+volumes:
+  lab:

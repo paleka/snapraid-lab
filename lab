@@ -7,8 +7,10 @@ M=/mnt/lab
 usage() {
     cat <<USAGE
 lab status                   disks, usage and SMART profiles
+lab disks                    every emulated disk: array, role, kind, model, size, filesystem
 lab seed <disk>              fill a data disk with sample files
 lab churn                    add, change, move and delete some files (gives 'diff' and 'sync' work)
+lab sync [array]             ask the daemon for a sync of an array (default, media, flash) and wait for it
 lab corrupt <disk>           silently flip bytes in one file (found by a scrub)
 lab wipe <disk>              empty a data disk, like a replaced one (recover it from the UI)
 lab delete <disk> <count>    delete <count> files (enough of them trips the sync safety threshold)
@@ -16,18 +18,24 @@ lab smart <disk> KEY=VALUE.. edit a SMART profile, e.g. REALLOCATED=120 TEMP=58 
 lab fill <dir> <MB>          write <MB> of files in a folder, e.g. to unbalance a pool: lab fill /mnt/lab/d1 150
 lab dup <pool>               copy a few files to a second disk of the pool, making duplicates
 lab reformat <disk>          give a data disk a new empty filesystem, like a replaced one (array goes DEGRADED)
+lab inbox [clear|<n>]        what the daemon notified (notify_start, notify_result, notify_heartbeat); <n> shows one
+lab hooks [block|allow]      the calls of the hook script; block: the next tasks are refused by the hook
+lab scenario <name>          a ready-made situation to look at in the UI; without a name, the list
 USAGE
 }
+# the daemon, from inside the container; with LAB_AUTH it wants the login
+api() { curl -s -m 30 ${LAB_AUTH:+-u "$LAB_AUTH"} "$@"; }
+base() { [ "${1:-default}" = default ] && echo http://127.0.0.1:7627/snapraid/v1 || echo "http://127.0.0.1:7627/snapraid/v1/arrays/$1"; }
 rnd() { echo $(( (RANDOM << 15 | RANDOM) % ($2 - $1 + 1) + $1 )); }
 need() { [ -d "$M/$1" ] || { echo "unknown disk '$1'"; exit 1; }; }
-files() { find "$M/$1" -type f ! -name 'snapraid.*' ! -path '*/lost+found/*'; }
+files() { find "$M/$1" -type f ! -name 'snapraid.*' ! -path '*/lost+found/*' ! -path '*/.snapraid/*'; }
 
 case "${1:-}" in
 status)
     df -h $M/* | sed 1d | awk '{printf "%-6s %6s used of %6s (%s)\n", substr($6, length($6)-1), $3, $2, $5}' | sed 's|^/||'
     for f in ${LAB_DIR:-/lab}/smart/*.env; do echo "--- $(basename "$f" .env): $(grep -E '^(MODEL|TEMP|REALLOCATED|PENDING|FAILING)=' "$f" | tr '\n' ' ')"; done ;;
 seed)
-    need "$2"; d=$M/$2; n=${2#[dm]}
+    need "$2"; d=$M/$2; n=${2#[a-z]}
     total_kb=$(df -k --output=size "$d" | tail -1)
     target_kb=$(( total_kb * (20 + (n * 17) % 45) / 100 ))   # each disk filled to a different level
     dirs=(Movies Music Photos/2024 Photos/2025 Documents/Taxes Documents/Projects Backups/laptop)
@@ -43,7 +51,7 @@ seed)
     done
     echo "[lab] seeded $2 with $i files ($((used / 1024)) MiB)" ;;
 churn)
-    for d in $M/d* $M/m*; do
+    for d in $M/d* $M/m* $M/f*; do
         [ -d "$d" ] || continue
         n=$(basename "$d")
         mkdir -p "$d/Incoming"
@@ -53,6 +61,18 @@ churn)
         files "$n" | grep -v Incoming | shuf -n 2 | xargs -r -d '\n' rm -f                           # removed
     done
     echo "[lab] files added, updated, moved and removed on every data disk" ;;
+sync)
+    b=$(base "${2:-default}")
+    code=$(api -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"tasks":[{"command":"sync"}]}' "$b/schedule")
+    [ "$code" = 202 ] || { echo "the daemon did not take the sync (answer $code)"; exit 1; }
+    sleep 2
+    for _ in $(seq 1 900); do
+        [ "$(api "$b/tasks" | jq '(.active | length) + (.pending | length)')" = 0 ] && break
+        sleep 1
+    done
+    r=$(api "$b/tasks" | jq -r '[.history[] | select(.command == "sync")][0] | "\(.status) \(.exit_code)"')
+    [ "$r" = "terminated 0" ] || { echo "the sync of ${2:-default} did not end well ($r)"; exit 1; }
+    echo "[lab] ${2:-default} is in sync" ;;
 corrupt)
     need "$2"; f=$(files "$2" | grep -v /Incoming/ | shuf -n 1); [ -n "$f" ] || exit 1
     ts=$(stat -c %y "$f")
@@ -76,13 +96,20 @@ dup)
     branches=$(getfattr --only-values -n user.mergerfs.branches "$pool/.mergerfs" 2>/dev/null)
     first=$(echo "$branches" | cut -d: -f1 | cut -d= -f1); second=$(echo "$branches" | cut -d: -f2 | cut -d= -f1)
     [ -n "$second" ] || { echo "the pool $pool needs two disks"; exit 1; }
-    find "$first" -type f ! -name 'snapraid.*' ! -path '*/lost+found/*' | shuf -n 4 | while read -r f; do
+    find "$first" -type f ! -name 'snapraid.*' ! -path '*/lost+found/*' ! -path '*/.snapraid/*' | shuf -n 4 | while read -r f; do
         rel=${f#"$first"}; mkdir -p "$second$(dirname "$rel")"; cp -p "$f" "$second$rel"; echo "[lab] duplicated $rel"
     done ;;
 reformat)
-    need "$2"; dev=$(findmnt -n -o SOURCE "$M/$2")
-    umount "$M/$2" && mkfs.ext4 -q -F -m 0 -L "$2" "$dev" && mount "$dev" "$M/$2" || exit 1
+    need "$2"; dev=$(findmnt -n -o SOURCE "$M/$2"); fs=$(findmnt -n -o FSTYPE "$M/$2")
+    umount "$M/$2" || exit 1
+    case $fs in
+    xfs) mkfs.xfs -q -f -L "$2" "$dev" ;;
+    btrfs) mkfs.btrfs -q -f -L "$2" "$dev" >/dev/null ;;
+    *) mkfs.ext4 -q -F -m 0 -L "$2" "$dev" ;;
+    esac && mount "$dev" "$M/$2" || exit 1
     uuid=$(blkid -p -s UUID -o value "$dev")
+    # the entry of the lab in fstab follows the disk: it is the same disk, emptied
+    sed -i "s|^UUID=[^[:space:]]*\([[:space:]]$M/$2[[:space:]]\)|UUID=$uuid\1|" ${LAB_DIR:-/lab}/etc/fstab
     find /dev/disk/by-uuid -type l -lname "$dev" -delete; ln -sf "$dev" "/dev/disk/by-uuid/$uuid"
     echo "[lab] $2 is now an empty new filesystem ($uuid): use Storage, Recover" ;;
 smart)
@@ -93,5 +120,118 @@ smart)
         if grep -q "^$k=" "$f"; then sed -i "s|^$k=.*|$kv|" "$f"; else echo "$kv" >> "$f"; fi
     done
     cat "$f" ;;
+disks)
+    L=${LAB_DIR:-/lab}
+    role() { # disk -> "array role"
+        local c n
+        for c in $L/etc/snapraid.conf $L/etc/snapraid/*.conf; do
+            [ -f "$c" ] || continue
+            n=$(basename "$c" .conf); [ "$c" = $L/etc/snapraid.conf ] && n=default
+            awk -v m="$M/$1" -v n="$n" '
+                $1 == "data" && ($3 == m || $3 == m "/") { print n, "data"; f = 1 }
+                $1 ~ /parity$/ { k = split($2, a, ","); for (i = 1; i <= k; i++) if (index(a[i], m "/") == 1) { print n, (k > 1 ? $1 " (split)" : $1); f = 1 } }
+                $1 == "extra" && ($3 == m || $3 == m "/") { print n, "extra (watched only)"; f = 1 }
+                END { exit !f }' "$c" && return
+        done
+        if mountpoint -q "$M/$1"; then echo "- mounted, no parity"; else echo "- blank spare"; fi
+    }
+    printf '%-5s %-8s %-22s %-5s %-28s %7s  %-5s %s\n' DISK ARRAY ROLE KIND MODEL SIZE FS USED
+    while read -r d; do
+        TYPE=; KIND=ata; TRAN=sata; MODEL=; RPM=7200
+        [ -f "$L/smart/$d.env" ] && . "$L/smart/$d.env"
+        case $KIND/$TRAN in nvme/*) k=NVMe ;; scsi/*) k=SAS ;; */usb) k=USB ;; *) [ "$RPM" = 0 ] && k=SSD || k=HDD ;; esac
+        [ "$TYPE" = smr ] && k=SMR
+        read -r a r <<< "$(role "$d" | head -1)"
+        fs=-; used=-
+        if mountpoint -q "$M/$d"; then fs=$(findmnt -n -o FSTYPE "$M/$d"); used=$(df --output=pcent "$M/$d" | tail -1 | tr -d ' '); fi
+        size=$(( $(stat -c %s "$L/img/$d.img" 2>/dev/null || echo 0) / 1048576 ))
+        printf '%-5s %-8s %-22s %-5s %-28s %5s M  %-5s %s\n' "$d" "$a" "$r" "$k" "$MODEL" "$size" "$fs" "$used"
+    done < $L/etc/lab-disks ;;
+inbox)
+    I=${LAB_DIR:-/lab}/notify/inbox; mkdir -p "$I"
+    case "${2:-}" in
+    clear) rm -f "$I"/*.txt; echo "[lab] inbox emptied" ;;
+    "") n=0
+        for f in "$I"/*.txt; do
+            [ -f "$f" ] || continue
+            n=$((n + 1))
+            printf '%3d  %s  %-9s %s\n' "$n" "$(sed -n 's/^Date: //p' "$f" | head -1)" "$(sed -n 's/^Kind: //p' "$f" | head -1)" "$(sed -n 's/^Subject: //p' "$f" | head -1)"
+        done
+        [ $n = 0 ] && echo "[lab] nothing notified yet: run a maintenance from the UI (the showcase lab notifies every result)" ;;
+    *) f=$(ls "$I"/*.txt 2>/dev/null | sed -n "${2}p"); [ -n "$f" ] && cat "$f" || echo "no notification number $2" ;;
+    esac ;;
+hooks)
+    N=${LAB_DIR:-/lab}/notify; mkdir -p "$N"
+    case "${2:-}" in
+    block) touch "$N/block"; echo "[lab] the hook now refuses task-begin: the next task ends with an error before touching the disks" ;;
+    allow) rm -f "$N/block"; echo "[lab] the hook lets the tasks run again" ;;
+    *) [ -s "$N/hooks.log" ] && tail -n 40 "$N/hooks.log" || echo "[lab] the hook was not called yet (it is set only in the showcase lab)" ;;
+    esac ;;
+scenario)
+    has() { [ -d "$M/$1" ]; }
+    case "${2:-}" in
+    failing-disk)   # SMART says the first parity disk is about to die
+        "$0" smart p1 FAILING=1 REALLOCATED=1840 PENDING=96 >/dev/null
+        echo "[lab] p1 now fails its SMART self-assessment: Disks page and health, at the next probe (one minute)" ;;
+    worn-flash)     # an NVMe disk at the end of its life
+        has f1 || { echo "this lab has no flash array"; exit 1; }
+        "$0" smart f1 WEAR_USED=97 SPARE=9 MEDIA_ERRORS=3 >/dev/null
+        echo "[lab] f1 is worn out (97% used, spare under the threshold): Disks page of the array 'flash'" ;;
+    heat)           # a disk over the temp_limit of snapraid.conf
+        "$0" smart d2 TEMP=58 >/dev/null
+        echo "[lab] d2 is at 58 C. With temp_limit (showcase lab) a sync or scrub stops, spins down and waits; back to normal: lab smart d2 TEMP=34" ;;
+    bit-rot)        # silent corruption on two arrays, found by a scrub and repaired by a fix
+        "$0" corrupt d2; has m1 && "$0" corrupt m1
+        echo "[lab] run a scrub of everything, then Fix" ;;
+    mass-delete)    # more deletions than sync_threshold_deletes
+        "$0" delete d1 60
+        echo "[lab] the next maintenance refuses to sync: the files are still recoverable (Undelete)" ;;
+    dead-disk)      # a data disk replaced by an empty one, right after a sync: everything comes back
+        "$0" sync default || exit 1
+        "$0" reformat d3
+        echo "[lab] the default array is DEGRADED: Storage, Overview, Recover" ;;
+    dead-disk-unsynced) # the same, with changes on the other disks not synced yet
+        "$0" churn; "$0" reformat d3
+        echo "[lab] the default array is DEGRADED, and files changed or deleted on the other disks since the last sync"
+        echo "[lab] were needed to rebuild d3: Recover brings back what the parity still covers, the rest is listed" ;;
+    dead-flash-disk) # the same accident on the array with snapshots: nothing is lost
+        has f2 || { echo "this lab has no flash array"; exit 1; }
+        "$0" churn; "$0" reformat f2
+        echo "[lab] the array 'flash' is DEGRADED with changes not synced, but its Btrfs disks keep a snapshot of the"
+        echo "[lab] last sync: choose the array flash, then Storage, Overview, Recover. Everything comes back" ;;
+    two-dead-disks) # two data disks lost together, right after a sync: needs both parity levels
+        "$0" sync default || exit 1
+        "$0" reformat d3; "$0" reformat d1
+        echo "[lab] two disks of the default array are empty: Storage, Overview, Recover (two parity levels rebuild both)" ;;
+    unbalanced)     # one disk of the pool much fuller than the others
+        "$0" fill $M/d1 120
+        echo "[lab] Storage, Pool, Balance" ;;
+    busy)           # work for every array at once: with array_parallel they run together
+        "$0" churn
+        echo "[lab] start a sync of every array from the Arrays page" ;;
+    hook-refuses)   # the hook stops the tasks before they start
+        "$0" hooks block
+        echo "[lab] start a sync: it ends at once with the error of the hook. Then: lab hooks allow" ;;
+    reset-smart)    # back to healthy disks
+        for f in ${LAB_DIR:-/lab}/smart/*.env; do sed -i 's/^FAILING=.*/FAILING=0/; s/^PENDING=.*/PENDING=0/; s/^REALLOCATED=.*/REALLOCATED=0/; s/^MEDIA_ERRORS=.*/MEDIA_ERRORS=0/; s/^SPARE=.*/SPARE=100/; s/^WEAR_USED=.*/WEAR_USED=2/; s/^TEMP=.*/TEMP=34/' "$f"; done
+        rm -f ${LAB_DIR:-/lab}/notify/block
+        echo "[lab] every disk reports good health again" ;;
+    *) cat <<LIST
+lab scenario failing-disk     a parity disk fails its SMART self-assessment
+lab scenario worn-flash       an NVMe disk at the end of its life
+lab scenario heat             a disk over the temperature limit of snapraid.conf
+lab scenario bit-rot          silent corruption on two arrays (scrub, then fix)
+lab scenario mass-delete      more deletions than the sync threshold allows
+lab scenario dead-disk        a data disk comes back empty, right after a sync (recover: everything is back)
+lab scenario dead-disk-unsynced  the same with changes not synced on the other disks (some files cannot be rebuilt)
+lab scenario dead-flash-disk  the same accident on the array with snapshots (recover: everything is back)
+lab scenario two-dead-disks   two data disks come back empty (recover with two parity levels)
+lab scenario unbalanced       one disk of the pool much fuller than the others (balance)
+lab scenario busy             changes on every array (sync them together)
+lab scenario hook-refuses     the hook script stops the tasks before they start
+lab scenario reset-smart      every disk healthy again
+LIST
+    ;;
+    esac ;;
 *) usage ;;
 esac

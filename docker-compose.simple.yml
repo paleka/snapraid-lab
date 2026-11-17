@@ -1,0 +1,31 @@
+# A small lab: one array of equal disks (4 data, 2 parity), two blank spares, no pool.
+# The place to try the guided setup (LAB_PRESET=blank) or to read the daemon with little around.
+#
+#     docker compose -f docker-compose.simple.yml up --build
+#     docker compose -f docker-compose.simple.yml down -v
+name: snapraid-lab-simple
+services:
+  snapraid:
+    build:
+      context: .
+      additional_contexts:
+        daemon: ${DAEMON_SRC:-../snapraid-daemon}
+    container_name: snapraid-lab
+    privileged: true
+    init: true
+    ports:
+      - "127.0.0.1:7627:7627"
+    environment:
+      LAB_PRESET: "${LAB_PRESET:-ready}"
+      LAB_UI: "${LAB_UI:-commander}"
+      LAB_DATA_DISKS: "4"
+      LAB_PARITY_DISKS: "2"
+      LAB_SPARE_DISKS: "2"
+      LAB_DISK_SIZE_MB: "512"
+    volumes:
+      - simplelab:/lab
+      - ${DAEMON_SRC:-../snapraid-daemon}/commander:/ui/commander
+      - ${DAEMON_SRC:-../snapraid-daemon}/brutale:/ui/brutale
+    stop_grace_period: 20s
+volumes:
+  simplelab:
