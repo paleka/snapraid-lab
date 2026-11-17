@@ -37,7 +37,7 @@ of a few hundred MB, described to SnapRAID and to the UI as the disks of the tab
 
 | | |
 |---|---|
-| **Arrays**: three arrays in one daemon, the four pools, and what protects every disk<br>[![Arrays](docs/screenshots/arrays.png)](docs/screenshots/arrays.png) | **Overview**: the default array, its pool and the advisor; the spares and the disks outside the array are on the right<br>[![Overview](docs/screenshots/overview.png)](docs/screenshots/overview.png) |
+| **Arrays**: three arrays in one daemon, the four pools, and what protects every disk<br>[![Arrays](docs/screenshots/arrays.png)](docs/screenshots/arrays.png) | **Overview**: the default array, its pool and the advisor; the blank spares and the disks that are in no array are on the right<br>[![Overview](docs/screenshots/overview.png)](docs/screenshots/overview.png) |
 | **Array & disks**: every disk the machine sees, with model, serial, kind, size and filesystem<br>[![Array & disks](docs/screenshots/array-and-disks.png)](docs/screenshots/array-and-disks.png) | **Kinds of disk**: HDD, SAS and SSD in one array, and two disks outside it that are watched all the same (`extra`)<br>[![Kinds of disk](docs/screenshots/showcase-disks.png)](docs/screenshots/showcase-disks.png) |
 | **An array of flash disks**: NVMe and SSD, with their wear in place of the failure probability<br>[![An array of flash disks](docs/screenshots/showcase-disks-flash.png)](docs/screenshots/showcase-disks-flash.png) | **A split parity**: one parity level over two disks: the first is full, the second holds the rest<br>[![A split parity](docs/screenshots/showcase-split-parity.png)](docs/screenshots/showcase-split-parity.png) |
 | **Storage of another array**: the sidebar chooses the array; this one places new files next to their folder, and the advisor says what that means<br>[![Storage of another array](docs/screenshots/arrays-storage.png)](docs/screenshots/arrays-storage.png) | **Pool**: the pools of the machine with branches, protection, placement policy and balance<br>[![Pool](docs/screenshots/pool.png)](docs/screenshots/pool.png) |
@@ -58,7 +58,7 @@ started with `LAB_PRESET=blank` (`shots-blank.json`).
 | What | Version |
 |---|---|
 | SnapRAID engine | release 15.1, unmodified, commit `4054832` (checked by the `Dockerfile`) |
-| SnapRAID Daemon | the checkout next to this folder; all the tests last run with `storage` at `98714a1` |
+| SnapRAID Daemon | the checkout next to this folder; all the tests last run with `storage` at `98714a1`, the pictures taken with `7250acd` |
 | mergerfs, xfsprogs, btrfs-progs | the ones of Debian 12 |
 
 ## Start
