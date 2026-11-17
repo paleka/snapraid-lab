@@ -1,0 +1,90 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Robert Paleka
+# Fake smartctl for the SnapRAID lab.
+# SnapRAID calls:  smartctl [-n standby,3] -a /dev/loopN     (probe / smart)
+#                  smartctl -s standby,now /dev/loopN         (spin down)
+# The answer comes from the profile ${LAB_DIR:-/lab}/smart/<disk>.env of the disk mounted from that loop device.
+dev="${@: -1}"
+loop="$(basename "$dev")"
+name="$(cat "/run/lab/map/$loop" 2>/dev/null)"
+if [ -z "$name" ] || [ ! -f "${LAB_DIR:-/lab}/smart/$name.env" ]; then
+    echo "Smartctl open device: $dev failed: No such device"
+    exit 2
+fi
+# defaults, overridden by the profile
+MODEL="LAB Virtual Disk"; FAMILY="SnapRAID Lab"; SERIAL="LAB-$name"; RPM=7200; TEMP=34
+POWER_ON_HOURS=1000; START_STOP=50; LOAD_CYCLE=500; POWER_CYCLE=50
+REALLOCATED=0; PENDING=0; UNCORRECTABLE=0; CRC_ERRORS=0; REPORTED_UNCORRECT=0; WEAR_LEVEL=""
+. "${LAB_DIR:-/lab}/smart/$name.env"
+
+stat_now="$(awk '{print $1+$5}' "/sys/block/$loop/stat" 2>/dev/null)"
+standby_file="/run/lab/standby/$name"
+
+case " $* " in
+*" standby,now "*)
+    mkdir -p /run/lab/standby
+    echo "$stat_now" > "$standby_file"
+    echo "Device placed in STANDBY mode"
+    exit 0 ;;
+esac
+
+# A spun down disk wakes up as soon as some I/O reaches it.
+if [ -f "$standby_file" ]; then
+    if [ "$(cat "$standby_file")" != "$stat_now" ]; then
+        rm -f "$standby_file"
+    else
+        case " $* " in *" -n "*) echo "Device is in STANDBY mode, exit(3)"; exit 3 ;; esac
+        rm -f "$standby_file"
+    fi
+fi
+
+bytes="$(( $(cat "/sys/block/$loop/size" 2>/dev/null || echo 0) * 512 ))"
+# small temperature drift so the charts are not flat
+temp=$(( TEMP + ( ($(date +%s) / 120 + ${#name} + ${#SERIAL}) % 3 ) ))
+health=PASSED; rc=0
+[ "${FAILING:-0}" = 1 ] && { health="FAILED!"; rc=8; }
+
+cat <<OUT
+smartctl 7.4 (lab emulation) [$(uname -m)-linux] (local build)
+
+=== START OF INFORMATION SECTION ===
+Model Family:     $FAMILY
+Device Model:     $MODEL
+Serial Number:    $SERIAL
+Firmware Version: LAB1.0
+User Capacity:    $bytes bytes
+Sector Sizes:     512 bytes logical, 4096 bytes physical
+OUT
+if [ "$RPM" = 0 ]; then echo "Rotation Rate:    Solid State Device"; else echo "Rotation Rate:    $RPM rpm"; fi
+cat <<OUT
+ATA Version is:   ACS-3 T13/2161-D revision 5
+SATA Version is:  SATA 3.3, 6.0 Gb/s (current: 6.0 Gb/s)
+SMART support is: Available - device has SMART capability.
+SMART support is: Enabled
+
+=== START OF READ SMART DATA SECTION ===
+SMART overall-health self-assessment test result: $health
+
+SMART Attributes Data Structure revision number: 16
+Vendor Specific SMART Attributes with Thresholds:
+ID# ATTRIBUTE_NAME          FLAG     VALUE WORST THRESH TYPE      UPDATED  WHEN_FAILED RAW_VALUE
+  1 Raw_Read_Error_Rate     0x002f   200   200   051    Pre-fail  Always       -       0
+  3 Spin_Up_Time            0x0027   172   169   021    Pre-fail  Always       -       8383
+  4 Start_Stop_Count        0x0032   100   100   000    Old_age   Always       -       $START_STOP
+  5 Reallocated_Sector_Ct   0x0033   200   200   140    Pre-fail  Always       -       $REALLOCATED
+  7 Seek_Error_Rate         0x002e   200   200   000    Old_age   Always       -       0
+  9 Power_On_Hours          0x0032   083   083   000    Old_age   Always       -       $POWER_ON_HOURS
+ 10 Spin_Retry_Count        0x0032   100   253   000    Old_age   Always       -       0
+ 12 Power_Cycle_Count       0x0032   100   100   000    Old_age   Always       -       $POWER_CYCLE
+187 Reported_Uncorrect      0x0032   100   100   000    Old_age   Always       -       $REPORTED_UNCORRECT
+193 Load_Cycle_Count        0x0032   157   157   000    Old_age   Always       -       $LOAD_CYCLE
+194 Temperature_Celsius     0x0022   127   119   000    Old_age   Always       -       $temp
+196 Reallocated_Event_Count 0x0032   200   200   000    Old_age   Always       -       $REALLOCATED
+197 Current_Pending_Sector  0x0032   200   200   000    Old_age   Always       -       $PENDING
+198 Offline_Uncorrectable   0x0030   100   253   000    Old_age   Offline      -       $UNCORRECTABLE
+199 UDMA_CRC_Error_Count    0x0032   200   200   000    Old_age   Always       -       $CRC_ERRORS
+OUT
+[ -n "$WEAR_LEVEL" ] && echo "177 Wear_Leveling_Count     0x0013   $WEAR_LEVEL   $WEAR_LEVEL   000    Pre-fail  Always       -       12"
+echo
+exit $rc

@@ -1,0 +1,28 @@
+# Runs the whole test suite: the unit tests during the image build, then the storage API
+# tests against a throwaway lab made of empty disks.
+#
+#     docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from tests
+#     docker compose -f docker-compose.test.yml down -v
+name: snapraid-lab-test
+services:
+  tests:
+    build:
+      context: .
+      additional_contexts:
+        daemon: ${DAEMON_SRC:-../snapraid-daemon}
+    container_name: snapraid-lab-test
+    privileged: true
+    init: true
+    environment:
+      LAB_PRESET: "blank"
+      LAB_DATA_DISKS: "3"
+      LAB_PARITY_DISKS: "1"
+      LAB_SPARE_DISKS: "1"
+      LAB_DISK_SIZE_MB: "512"
+      LAB_RUN_TESTS: "1"
+    volumes:
+      - testlab:/lab
+      - ${DAEMON_SRC:-../snapraid-daemon}/commander:/ui/commander
+      - ${DAEMON_SRC:-../snapraid-daemon}/brutale:/ui/brutale
+volumes:
+  testlab:

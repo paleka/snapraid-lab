@@ -1,0 +1,33 @@
+# SnapRAID lab: `docker compose up --build` from this folder, then open http://localhost:7627
+#
+# DAEMON_SRC is the checkout of https://github.com/paleka/snapraid-daemon (branch storage).
+# By default it is expected next to this folder.
+name: snapraid-lab
+services:
+  snapraid:
+    build:
+      context: .
+      additional_contexts:
+        daemon: ${DAEMON_SRC:-../snapraid-daemon}
+    container_name: snapraid-lab
+    # Needed to attach loop devices, mount the emulated disks and run mergerfs (FUSE).
+    privileged: true
+    init: true
+    ports:
+      - "127.0.0.1:7627:7627"
+    environment:
+      LAB_DATA_DISKS: "4"        # number of data disks (d1..dN)
+      LAB_PARITY_DISKS: "2"      # number of parity disks (1..6)
+      LAB_SPARE_DISKS: "2"       # extra blank disks (s1..sN), for adding and replacing from the UI
+      LAB_DISK_SIZE_MB: "512"    # size of every emulated disk
+      LAB_PRESET: "${LAB_PRESET:-ready}"        # ready: array already built | blank: only empty disks, build it with the guided setup
+      LAB_UI: "commander"        # commander | brutale
+    volumes:
+      # Disk images, array config, logs. `docker compose down -v` resets the lab.
+      - lab:/lab
+      # Live UI sources: edit them in the checkout and just reload the browser.
+      - ${DAEMON_SRC:-../snapraid-daemon}/commander:/ui/commander
+      - ${DAEMON_SRC:-../snapraid-daemon}/brutale:/ui/brutale
+    stop_grace_period: 20s
+volumes:
+  lab:
