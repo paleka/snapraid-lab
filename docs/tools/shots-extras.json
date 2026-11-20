@@ -1,0 +1,109 @@
+{
+  "shots": [
+    {
+      "name": "extras-disks-usb",
+      "hash": "#/drives",
+      "h": 700,
+      "steps": [
+        {
+          "eval": "[...document.querySelectorAll('.sp-disk')].find(d => d.textContent.includes('LAB1629U1'))?.scrollIntoView({ block: 'center' })"
+        }
+      ]
+    },
+    {
+      "name": "extras-write-test",
+      "hash": "#/drives",
+      "h": 760,
+      "steps": [
+        {
+          "eval": "[...document.querySelectorAll('.sp-disk')].find(d => d.textContent.includes('LAB1259S2'))?.querySelector('[data-sp=\"disk-test\"]')?.click()"
+        }
+      ]
+    },
+    {
+      "name": "extras-usb-eject",
+      "hash": "#/drives",
+      "h": 640,
+      "steps": [
+        {
+          "eval": "[...document.querySelectorAll('.sp-disk')].find(d => d.textContent.includes('LAB1629U1'))?.querySelector('[data-sp=\"usb-eject\"]')?.click()",
+          "wait": 1500
+        }
+      ]
+    },
+    {
+      "name": "extras-runs",
+      "hash": "#/protection",
+      "h": 900,
+      "steps": [
+        {
+          "scroll": ".sp-run-rec"
+        }
+      ]
+    },
+    {
+      "name": "extras-protection-advanced",
+      "hash": "#/protection",
+      "h": 1250,
+      "steps": [
+        {
+          "eval": "localStorage.setItem('sp-adv-protection','1')"
+        },
+        {
+          "eval": "location.reload()",
+          "wait": 3000
+        }
+      ]
+    },
+    {
+      "name": "extras-ups",
+      "hash": "#/system",
+      "h": 1500,
+      "steps": [
+        {
+          "eval": "localStorage.setItem('sp-adv-ups','1')"
+        },
+        {
+          "eval": "location.reload()",
+          "wait": 3000
+        },
+        {
+          "scroll": "#sp-ups-id"
+        }
+      ]
+    },
+    {
+      "name": "extras-other-computers",
+      "hash": "#/backups",
+      "h": 900,
+      "steps": []
+    },
+    {
+      "name": "extras-remote-edit",
+      "hash": "#/backups",
+      "h": 900,
+      "steps": [
+        {
+          "click": "[data-sp=\"remote-edit\"][data-name=\"anna-pc\"]"
+        }
+      ]
+    },
+    {
+      "name": "extras-backup-from-computer",
+      "hash": "#/backups",
+      "h": 1000,
+      "steps": [
+        {
+          "click": "[data-sp=\"backup-edit\"][data-name=\"anna-pictures\"]",
+          "wait": 2000
+        }
+      ]
+    },
+    {
+      "name": "extras-alerts",
+      "hash": "#/alerts",
+      "h": 900,
+      "steps": []
+    }
+  ]
+}

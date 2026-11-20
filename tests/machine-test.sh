@@ -234,7 +234,7 @@ post wipe "{\"device\":\"$D1\",\"method\":\"zero\",\"confirm\":\"$D1\"}";  expec
 post wipe "{\"device\":\"$U1\",\"method\":\"zero\",\"confirm\":\"$U1\"}";  expect "a mounted disk is refused" 409 "mounted"
 post wipe "{\"device\":\"${U1}p1\",\"method\":\"zero\",\"confirm\":\"${U1}p1\"}";  expect "a partition is refused" 400 "whole disk"
 post wipe "{\"device\":\"$S2\",\"method\":\"zero\",\"confirm\":\"/dev/sdz\"}";  expect "without the right confirmation it's refused" 400 "confirm"
-post wipe "{\"device\":\"$S2\",\"method\":\"fast\",\"confirm\":\"$S2\"}";  expect "an unknown method is refused" 400 "zero or random"
+post wipe "{\"device\":\"$S2\",\"method\":\"fast\",\"confirm\":\"$S2\"}";  expect "an unknown method is refused" 400 "zero, random or test"
 head -c 1M /dev/urandom | dd of=$S2 bs=1M conv=notrunc status=none
 post wipe "{\"device\":\"$S2\",\"method\":\"zero\",\"confirm\":\"$S2\"}";  expect "a blank disk is wiped" 202
 check "it ends" job_ok

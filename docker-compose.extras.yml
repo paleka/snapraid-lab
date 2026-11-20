@@ -1,0 +1,22 @@
+# Checks the write test of a new disk, the record of the runs, the update when enough files
+# changed, the battery backup (UPS), the disks opened and ejected, the folders of other computers
+# as sources of a backup and the alerts to more places at once, on the showcase lab: the same
+# disks and options of docker-compose.yml, then tests/extras-test.sh on them.
+# It uses the port of the lab: stop the lab first.
+#
+#     docker compose -f docker-compose.extras.yml up --build --abort-on-container-exit --exit-code-from tests
+#     docker compose -f docker-compose.extras.yml down -v
+name: snapraid-lab-extras
+services:
+  tests:
+    extends:
+      file: docker-compose.yml
+      service: snapraid
+    container_name: snapraid-lab-extras
+    environment:
+      LAB_PRESET: "ready"
+      LAB_AUTH: ""
+      LAB_RUN_TESTS: "1"
+      LAB_TEST: "extras-test.sh"
+volumes:
+  lab:

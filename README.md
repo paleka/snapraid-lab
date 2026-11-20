@@ -59,6 +59,20 @@ ones, and is remembered page by page. Taken from the showcase lab after
 | **Empty a disk**: its files go to the other disks, then one click takes it out of the array<br>[![Empty a disk](docs/screenshots/tiers-empty-remove.png)](docs/screenshots/tiers-empty-remove.png) | **Adding a disk larger than the parity**: the Add dialog offers to make it the parity<br>[![Adding a disk larger than the parity](docs/screenshots/tiers-add-parity-tip.png)](docs/screenshots/tiers-add-parity-tip.png) |
 | **One file of a split parity to a larger disk**<br>[![One file of a split parity](docs/screenshots/tiers-parity-split.png)](docs/screenshots/tiers-parity-split.png) | |
 
+### Tests of new disks, a power cut, USB disks, other computers
+
+Taken from the showcase lab after `docs/tools/extras-prepare.sh`, which sets a stand-in UPS, a
+stand-in computer with a shared folder and a backup of it, two places for the alerts, and a scrub
+that finds damage followed by its repair.
+
+| | |
+|---|---|
+| **Test of a new disk**: every block written and read back before it holds files; it asks for the name of the disk, since it erases it<br>[![Test of a new disk](docs/screenshots/extras-write-test.png)](docs/screenshots/extras-write-test.png) | **A USB disk**: Eject finishes the writes and releases it; Open makes its files reachable until ejected, without a line in fstab<br>[![A USB disk](docs/screenshots/extras-disks-usb.png)](docs/screenshots/extras-disks-usb.png) |
+| **Eject**: what happens, and what does not change<br>[![Eject](docs/screenshots/extras-usb-eject.png)](docs/screenshots/extras-usb-eject.png) | **Past runs**: every update and check with the damage found and what was repaired, kept on disk<br>[![Past runs](docs/screenshots/extras-runs.png)](docs/screenshots/extras-runs.png) |
+| **Protection, with Advanced on**: also update as soon as enough files changed<br>[![Protection, with Advanced on](docs/screenshots/extras-protection-advanced.png)](docs/screenshots/extras-protection-advanced.png) | **Power cut**: the UPS, its charge, and the shutdown before the battery is empty; with Advanced the charge and the minutes<br>[![Power cut](docs/screenshots/extras-ups.png)](docs/screenshots/extras-ups.png) |
+| **Other computers**: shared folders of a PC, a Mac or a NAS, copied here by a backup<br>[![Other computers](docs/screenshots/extras-other-computers.png)](docs/screenshots/extras-other-computers.png) | **Add another computer**: its name, the shared folder, the user; the password kept apart, for root only<br>[![Add another computer](docs/screenshots/extras-remote-edit.png)](docs/screenshots/extras-remote-edit.png) |
+| **A backup from another computer**: a folder of it, into a folder of this server, on a schedule<br>[![A backup from another computer](docs/screenshots/extras-backup-from-computer.png)](docs/screenshots/extras-backup-from-computer.png) | **Alerts to more places**: a phone and an email, every message to all of them<br>[![Alerts to more places](docs/screenshots/extras-alerts.png)](docs/screenshots/extras-alerts.png) |
+
 ### The Storage and Arrays pages
 
 ![Tour of the Storage and Arrays pages](docs/screenshots/tour.gif)
@@ -83,9 +97,10 @@ of a few hundred MB, described to SnapRAID and to the UI as the disks of the tab
 | **Recovery in the Tasks page**: every step with its result<br>[![Recovery in the Tasks page](docs/screenshots/recover-tasks.png)](docs/screenshots/recover-tasks.png) | **Add an array**: a name, and optionally an existing SnapRAID configuration to take over<br>[![Add an array](docs/screenshots/arrays-add.png)](docs/screenshots/arrays-add.png) |
 | **Move a disk to another array**: with its files, step by step, and when the disk has no parity<br>[![Move a disk to another array](docs/screenshots/arrays-move.png)](docs/screenshots/arrays-move.png) |  |
 
-They are made with `docs/tools/shots.mjs` (Playwright and Chrome) from five states of the lab:
+They are made with `docs/tools/shots.mjs` (Playwright and Chrome) from six states of the lab:
 as it starts (`shots-ready.json`), after `lab scenario mass-delete` and a maintenance
 (`shots-everyday.json`), after `docs/tools/tiers-prepare.sh` (`shots-tiers.json`), after
+`docs/tools/extras-prepare.sh` (`shots-extras.json`), after
 `lab scenario dead-disk` (`shots-degraded.json`), and started with `LAB_PRESET=blank`
 (`shots-blank.json`).
 
@@ -333,6 +348,32 @@ and a full scrub after; a disk too small and a pool refused; the size of a folde
 of a whole disk; the copy of a single file; and a sync stopped by the limit of the deleted files
 run again by the daemon when many more files were added, and not when few were.
 
+A ninth one, `tests/extras-test.sh`, checks the write test of a new disk, the record of the runs,
+the battery backup (UPS), the disks opened and ejected, the folders of other computers and the
+alerts to more places at once, on the showcase lab (stop the lab first; about fifteen minutes,
+most of them waiting for the daemon to look for changes by itself):
+
+    docker compose -f docker-compose.extras.yml up --build --abort-on-container-exit --exit-code-from tests
+    docker compose -f docker-compose.extras.yml down -v
+
+The lab has no UPS, no other computer and no mail, so the test writes small stand-ins of `upsc`,
+`mount.cifs` and `mail` for its time, and removes them at the end. It covers the blank disk `s2`
+written and read back whole, left blank, with disks of an array refused; a sync and a scrub in
+the record, silent damage written into a protected file found by a scrub and recorded with its
+errors, the repair recorded with what it recovered, and every run recorded once; a power cut
+seen, the scrub running then stopped and recorded as stopped, the shutdown (only logged in the
+lab) below the chosen charge, below the minutes left and when the UPS says the battery is low,
+never on one read alone nor with the shutdown turned off, and a UPS that stops answering not
+taken as a power cut; the USB disk `u1` ejected, refused while a file on it is open, opened under
+`/media` without a line in fstab and ejected from one of its partitions, with the disk of a pool
+refused; a folder of another computer saved with its password apart, a wrong password, a missing
+folder and a computer that does not answer told in plain words, its folders listed, a backup
+copying it here and releasing it after, a failed run recorded, and its removal refused while a
+backup uses it; five places of the alerts written in one script for root only, every place
+reached by a report of the daemon, and one place failing not stopping the others; and the
+maintenance started when enough files changed, and not when few did (`LAB_TEST_SLOW=0` skips
+this part).
+
 ## What is emulated
 
 - Every disk is a sparse image file, attached as a loop device with a partition table,
@@ -423,6 +464,7 @@ SMART changes show up at the next probe (every minute).
 | `docker-compose.arrays.yml` | throwaway lab that runs `tests/multi-array-test.sh` |
 | `docker-compose.machine.yml` | the showcase lab, running `tests/machine-test.sh` |
 | `docker-compose.tiers.yml` | the showcase lab, running `tests/tiers-test.sh` |
+| `docker-compose.extras.yml` | the showcase lab, running `tests/extras-test.sh` |
 | `docker-compose.existing.yml` | no lab: a machine already using SnapRAID from the shell, for `tests/existing-setup-test.sh` |
 | `entrypoint.sh` | creates and mounts the disks, writes the configs, starts `snapraidd` |
 | `fake-smartctl`, `smartctl-launcher.c` | SMART emulation, self-tests included (SnapRAID only runs real binaries, hence the launcher) |
