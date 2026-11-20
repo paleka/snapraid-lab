@@ -54,8 +54,10 @@ ones, and is remembered page by page. Taken from the showcase lab after
 | **Disks, with Advanced on**: every disk also offers what applies to it among power settings, what uses it, copy, empty, and the move of the parity<br>[![Disks, with Advanced on](docs/screenshots/tiers-disks-advanced.png)](docs/screenshots/tiers-disks-advanced.png) | **Fast disk**: an SSD in front of the pool: how much waits on it, that it is not protected until moved, and when it is moved<br>[![Fast disk](docs/screenshots/tiers-fast-disk.png)](docs/screenshots/tiers-fast-disk.png) |
 | **Fast disk, its settings**: the time of the move; with Advanced also the age of the files to leave, the fill level and the sync after<br>[![Fast disk, its settings](docs/screenshots/tiers-fast-disk-edit.png)](docs/screenshots/tiers-fast-disk-edit.png) | **The parity on a larger disk**: copied, checked byte by byte, then the array is switched to it; the old parity disk becomes a data disk<br>[![The parity on a larger disk](docs/screenshots/tiers-parity-move.png)](docs/screenshots/tiers-parity-move.png) |
 | **Replace by copying**: when the old disk still reads, its files go straight to the new one<br>[![Replace by copying](docs/screenshots/tiers-replace-copy.png)](docs/screenshots/tiers-replace-copy.png) | **Protection, with Advanced on**: going on after a big tidy up, reading new files twice, stopping on files become empty<br>[![Protection, with Advanced on](docs/screenshots/tiers-protection-advanced.png)](docs/screenshots/tiers-protection-advanced.png) |
-| **My files, with Advanced on**: the size of a folder and its move to one disk<br>[![My files, with Advanced on](docs/screenshots/tiers-files-advanced.png)](docs/screenshots/tiers-files-advanced.png) | **A folder to one disk**: where it is now, where it goes, what happens and what does not change<br>[![A folder to one disk](docs/screenshots/tiers-folder-move.png)](docs/screenshots/tiers-folder-move.png) |
+| **My files, with Advanced on**: the size of a folder and the disks it lives on<br>[![My files, with Advanced on](docs/screenshots/tiers-files-advanced.png)](docs/screenshots/tiers-files-advanced.png) | **The disks of a folder**: where it is now, where it should live, and if it is kept there for the files to come<br>[![The disks of a folder](docs/screenshots/tiers-folder-move.png)](docs/screenshots/tiers-folder-move.png) |
 | **Size of a folder**: how much of it is on every disk<br>[![Size of a folder](docs/screenshots/tiers-folder-size.png)](docs/screenshots/tiers-folder-size.png) | **The tour of the first visit**: five short steps, also in Help<br>[![The tour of the first visit](docs/screenshots/tiers-tour.png)](docs/screenshots/tiers-tour.png) |
+| **Empty a disk**: its files go to the other disks, then one click takes it out of the array<br>[![Empty a disk](docs/screenshots/tiers-empty-remove.png)](docs/screenshots/tiers-empty-remove.png) | **Adding a disk larger than the parity**: the Add dialog offers to make it the parity<br>[![Adding a disk larger than the parity](docs/screenshots/tiers-add-parity-tip.png)](docs/screenshots/tiers-add-parity-tip.png) |
+| **One file of a split parity to a larger disk**<br>[![One file of a split parity](docs/screenshots/tiers-parity-split.png)](docs/screenshots/tiers-parity-split.png) | |
 
 ### The Storage and Arrays pages
 
@@ -322,9 +324,12 @@ showing the same files with the same data before and after, the files with a twi
 disk left and named, a path climbing out or going through a link refused, and the sync that asks
 when a disk was emptied; the blank disk `s2` as fast disk in front of the pool: new files landing
 on it, the mover bringing them to the array and running the maintenance, a file just written left
-for the next time; the parity copied to the blank disk `s1`, the same as the original, with the
-old one untouched, a full scrub against the copy, and a deleted file rebuilt from it; a split
-parity, a disk too small and a pool refused; the size of a folder disk by disk; the reading test
+for the next time, a folder set to stay on the fast disk left there; a folder kept on chosen
+disks: brought to one disk, a new file taken there by the mover, a file landed elsewhere brought
+back, a second folder on two disks; the parity copied to the blank disk `s1`, the same as the
+original, with the old one untouched, a full scrub against the copy, and a deleted file rebuilt
+from it; one file of the split parity of the `media` array moved to another disk, with the sync
+and a full scrub after; a disk too small and a pool refused; the size of a folder disk by disk; the reading test
 of a whole disk; the copy of a single file; and a sync stopped by the limit of the deleted files
 run again by the daemon when many more files were added, and not when few were.
 

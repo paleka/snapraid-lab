@@ -1,14 +1,228 @@
 {
   "shots": [
-    { "name": "tiers-disks-advanced", "hash": "#/drives", "h": 2250, "steps": [{ "eval": "localStorage.setItem('sp-adv-drives','1')" }, { "eval": "location.reload()", "wait": 3000 }] },
-    { "name": "tiers-fast-disk", "hash": "#/drives", "h": 620, "steps": [{ "scroll": "[data-sp=\"cache-run\"]" }] },
-    { "name": "tiers-fast-disk-edit", "hash": "#/drives", "h": 760, "steps": [{ "click": "[data-sp=\"cache-edit\"]", "wait": 800 }, { "click": ".modal-overlay [data-sp=\"adv\"]", "wait": 500 }] },
-    { "name": "tiers-parity-move", "hash": "#/storage", "h": 1050, "steps": [{ "click": "[data-st=\"tab\"][data-tab=\"array\"]", "wait": 900 }, { "click": "[data-st=\"parity-move\"]", "wait": 1200 }] },
-    { "name": "tiers-replace-copy", "hash": "#/storage", "h": 1050, "steps": [{ "click": "[data-st=\"tab\"][data-tab=\"array\"]", "wait": 900 }, { "click": "[data-st=\"replace\"][data-kind=\"data\"]", "wait": 1200 }, { "click": "input[name=\"r-how\"][value=\"copy\"]", "wait": 700 }] },
-    { "name": "tiers-protection-advanced", "hash": "#/protection", "h": 1500, "steps": [{ "click": "[data-sp=\"adv\"]", "wait": 500 }, { "scroll": "#sp-pr-prehash" }, { "eval": "document.querySelectorAll('.tooltip-floating').forEach(e => e.remove())", "wait": 200 }] },
-    { "name": "tiers-files-advanced", "hash": "#/files", "h": 760, "steps": [{ "click": "[data-sp=\"adv\"]", "wait": 500 }, { "eval": "document.querySelectorAll('.tooltip-floating').forEach(e => e.remove())", "wait": 200 }] },
-    { "name": "tiers-folder-move", "hash": "#/files", "h": 760, "steps": [{ "click": "[data-sp=\"adv\"]", "wait": 500 }, { "click": "[data-sp=\"file-move\"]", "wait": 900 }] },
-    { "name": "tiers-folder-size", "hash": "#/files", "h": 760, "steps": [{ "click": "[data-sp=\"adv\"]", "wait": 500 }, { "click": "[data-sp=\"file-usage\"]", "wait": 4000 }] },
-    { "name": "tiers-tour", "hash": "#/help", "h": 620, "steps": [{ "click": "[data-sp=\"tour\"]", "wait": 600 }, { "text": "Next", "exact": true }, { "text": "Next", "exact": true }, { "text": "Next", "exact": true }] }
+    {
+      "name": "tiers-disks-advanced",
+      "hash": "#/drives",
+      "h": 2250,
+      "steps": [
+        {
+          "eval": "localStorage.setItem('sp-adv-drives','1')"
+        },
+        {
+          "eval": "location.reload()",
+          "wait": 3000
+        }
+      ]
+    },
+    {
+      "name": "tiers-fast-disk",
+      "hash": "#/drives",
+      "h": 620,
+      "steps": [
+        {
+          "scroll": "[data-sp=\"cache-run\"]"
+        }
+      ]
+    },
+    {
+      "name": "tiers-fast-disk-edit",
+      "hash": "#/drives",
+      "h": 760,
+      "steps": [
+        {
+          "click": "[data-sp=\"cache-edit\"]",
+          "wait": 800
+        },
+        {
+          "click": ".modal-overlay [data-sp=\"adv\"]",
+          "wait": 500
+        }
+      ]
+    },
+    {
+      "name": "tiers-parity-move",
+      "hash": "#/storage",
+      "h": 1050,
+      "steps": [
+        {
+          "click": "[data-st=\"tab\"][data-tab=\"array\"]",
+          "wait": 900
+        },
+        {
+          "click": "[data-st=\"parity-move\"]",
+          "wait": 1200
+        }
+      ]
+    },
+    {
+      "name": "tiers-replace-copy",
+      "hash": "#/storage",
+      "h": 1050,
+      "steps": [
+        {
+          "click": "[data-st=\"tab\"][data-tab=\"array\"]",
+          "wait": 900
+        },
+        {
+          "click": "[data-st=\"replace\"][data-kind=\"data\"]",
+          "wait": 1200
+        },
+        {
+          "click": "input[name=\"r-how\"][value=\"copy\"]",
+          "wait": 700
+        }
+      ]
+    },
+    {
+      "name": "tiers-protection-advanced",
+      "hash": "#/protection",
+      "h": 1500,
+      "steps": [
+        {
+          "click": "[data-sp=\"adv\"]",
+          "wait": 500
+        },
+        {
+          "scroll": "#sp-pr-prehash"
+        },
+        {
+          "eval": "document.querySelectorAll('.tooltip-floating').forEach(e => e.remove())",
+          "wait": 200
+        }
+      ]
+    },
+    {
+      "name": "tiers-files-advanced",
+      "hash": "#/files",
+      "h": 760,
+      "steps": [
+        {
+          "click": "[data-sp=\"adv\"]",
+          "wait": 500
+        },
+        {
+          "eval": "document.querySelectorAll('.tooltip-floating').forEach(e => e.remove())",
+          "wait": 200
+        }
+      ]
+    },
+    {
+      "name": "tiers-folder-move",
+      "hash": "#/files",
+      "h": 1000,
+      "steps": [
+        {
+          "click": "[data-sp=\"adv\"]",
+          "wait": 500
+        },
+        {
+          "click": "[data-sp=\"file-move\"][data-rel=\"/Photos\"]",
+          "wait": 1500
+        },
+        {
+          "click": ".modal-overlay.active label:has(#sp-mv-keep) .slider",
+          "wait": 400
+        }
+      ]
+    },
+    {
+      "name": "tiers-folder-size",
+      "hash": "#/files",
+      "h": 760,
+      "steps": [
+        {
+          "click": "[data-sp=\"adv\"]",
+          "wait": 500
+        },
+        {
+          "click": "[data-sp=\"file-usage\"]",
+          "wait": 4000
+        }
+      ]
+    },
+    {
+      "name": "tiers-tour",
+      "hash": "#/help",
+      "h": 620,
+      "steps": [
+        {
+          "click": "[data-sp=\"tour\"]",
+          "wait": 600
+        },
+        {
+          "text": "Next",
+          "exact": true
+        },
+        {
+          "text": "Next",
+          "exact": true
+        },
+        {
+          "text": "Next",
+          "exact": true
+        }
+      ]
+    },
+    {
+      "name": "tiers-empty-remove",
+      "hash": "#/drives",
+      "h": 900,
+      "steps": [
+        {
+          "eval": "localStorage.setItem('sp-adv-drives','1')"
+        },
+        {
+          "eval": "location.reload()",
+          "wait": 3000
+        },
+        {
+          "click": "[data-sp=\"disk-empty\"][data-name=\"d4\"]",
+          "wait": 900
+        },
+        {
+          "eval": "document.querySelectorAll('.tooltip-floating').forEach(e => e.remove())",
+          "wait": 200
+        }
+      ]
+    },
+    {
+      "name": "tiers-add-parity-tip",
+      "hash": "#/storage",
+      "h": 1000,
+      "steps": [
+        {
+          "click": "[data-st=\"tab\"][data-tab=\"array\"]",
+          "wait": 900
+        },
+        {
+          "click": "[data-st=\"wizard\"]",
+          "wait": 1200
+        },
+        {
+          "eval": "document.querySelectorAll('.tooltip-floating').forEach(e => e.remove())",
+          "wait": 200
+        }
+      ]
+    },
+    {
+      "name": "tiers-parity-split",
+      "array": "media",
+      "hash": "#/storage",
+      "h": 1000,
+      "steps": [
+        {
+          "click": "[data-st=\"tab\"][data-tab=\"array\"]",
+          "wait": 900
+        },
+        {
+          "click": "[data-st=\"parity-move\"]",
+          "wait": 1200
+        },
+        {
+          "eval": "document.querySelectorAll('.tooltip-floating').forEach(e => e.remove())",
+          "wait": 200
+        }
+      ]
+    }
   ]
 }

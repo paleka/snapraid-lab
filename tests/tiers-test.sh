@@ -224,7 +224,9 @@ spost parity_move "{\"parity\":\"sync\",\"target\":\"$D/u1\"}";          expect 
 spost parity_move "{\"parity\":\"parity\",\"target\":\"$D/x1\"}";        expect "a disk without room is refused" 409 "too small"
 spost parity_move "{\"parity\":\"parity\",\"target\":\"$POOL\"}";        expect "a pool is refused" 400 "not the mount point"
 req POST $U/arrays/media/storage/parity_move "{\"parity\":\"parity\",\"target\":\"$D/u1\"}"
-expect "a split parity is refused, with what to do" 409 "split"
+expect "a split parity asks which of its files" 409 "which one"
+req POST $U/arrays/media/storage/parity_move "{\"parity\":\"parity\",\"part\":\"3\",\"target\":\"$D/u1\"}"
+expect "a file the split parity does not have is refused" 404 "that many files"
 spost format "{\"device\":\"$S1\",\"fstype\":\"ext4\",\"label\":\"parity1\",\"purpose\":\"parity\",\"wipe\":false}"
 expect "the new parity disk is formatted" 200
 check "format done" job_ok
@@ -257,6 +259,90 @@ rm -f "$V"
 req POST $U/schedule "{\"tasks\":[{\"command\":\"fix\",\"args\":[\"-m\",\"-d\",\"d3\"]}]}"
 tasks_wait
 check "a deleted file is rebuilt with the new parity" test "$(md5sum < "$V" 2>/dev/null)" = "$VSUM"
+
+section "one file of a split parity on another disk"
+MCONF=$(curl -s $U/arrays/media/storage | jq -r .engine_conf.path)
+PARTS=$(sed -n 's/^parity //p' "$MCONF")
+P1=${PARTS%%,*}; P2=${PARTS#*,}
+P1SUM=$(md5sum < "$P1")
+req POST $U/arrays/media/storage/parity_move "{\"parity\":\"parity\",\"part\":\"1\",\"target\":\"$D/u1\"}"
+expect "the copy of the first file starts" 200
+check "and ends well" job_ok
+check "the copy is the same as the original" test "$(md5sum < "$D/u1/$(basename "$P1")")" = "$P1SUM"
+check "the old file was not touched" test "$(md5sum < "$P1")" = "$P1SUM"
+check "only that file changed place in the configuration" grep -qx "parity $D/u1/$(basename "$P1"),$P2" "$MCONF"
+req POST $U/arrays/media/storage/recover '{"disks":"","check":false,"accept":true,"force_uuid":false}'
+expect "the array records the new disk" 200
+mtasks_wait() { sleep 2; for _ in $(seq 1 600); do [ "$(curl -s "$U/arrays/media/tasks?limit_history=0&limit_messages=0" | jq '(.active | length) + (.pending | length)')" = 0 ] && return 0; sleep 1; done; return 1; }
+mlast() { curl -s "$U/arrays/media/tasks?limit_history=12&limit_messages=0" | jq -r "[.history[] | select(.command == \"$1\")][0] | $2"; }
+mtasks_wait
+check "with a sync that ends well" test "$(mlast sync .exit_code)" = 0
+req POST $U/arrays/media/schedule '{"tasks":[{"command":"scrub","args":["-p","100","-o","0"]}]}'
+mtasks_wait
+check "every block checks against the moved file" test "$(mlast scrub '(.exit_code | tostring) + " " + ((.error_data // 0) | tostring) + " " + ((.error_io // 0) | tostring)')" = "0 0 0"
+
+section "a folder kept on chosen disks"
+KEEP="{\"name\":\"Music\",\"pool\":\"$POOL\",\"path\":\"/Music\",\"disks\":\"$D/d3\",\"when\":\"04:00\",\"enabled\":true}"
+post keep_save "{\"name\":\"Music\",\"pool\":\"$POOL\",\"path\":\"/Music\"}";                          expect "a folder without disks is refused" 400 "disks chosen"
+post keep_save "{\"name\":\"Music\",\"pool\":\"$POOL\",\"path\":\"/Music/\",\"disks\":\"$D/d3\"}";      expect "a path with a final slash is refused" 400
+post keep_save "{\"name\":\"Music\",\"pool\":\"$POOL\",\"path\":\"/Music\",\"disks\":\"$D/u1\"}";       expect "a disk outside the pool is refused" 400 "not a disk of the pool"
+post keep_save "{\"name\":\"Music\",\"pool\":\"$POOL\",\"path\":\"/Music\",\"disks\":\"$D/d3::$D/d2\"}"; expect "a broken list of disks is refused" 400 "invalid value"
+post keep_save "{\"name\":\"Music\",\"pool\":\"/mnt/nopool\",\"path\":\"/Music\",\"disks\":\"$D/d3\"}";   expect "a pool that is not there is refused" 400 "not a mounted mergerfs pool"
+post settings '{"keep.x":"pool=/mnt/x"}';                                                                 expect "kept folders have their own request" 400 "of its own"
+post keep_run '{"name":"nothere"}';                                                                       expect "a folder that is not kept cannot be tidied" 404 "no folder kept"
+find $D/d1 $D/d2 $D/d3 $D/d4 $D/cache -type f -mmin -60 ! -name 'snapraid.content*' -exec touch -d '2 hours ago' {} + 2>/dev/null
+KSUM=$(pool_sum)
+ALLMUSIC=$(files_in $POOL/Music)
+check "the folder is on more disks, or on another one" test "$(files_in $D/d3/Music)" != "$ALLMUSIC"
+post keep_save "$KEEP";                                                                                   expect "the folder to keep is saved" 202
+check "it is read back" test "$(host '.keeps[0] | .name + " " + .path + " " + .disks + " " + .when')" = "Music /Music $D/d3 04:00"
+post keep_run '{"name":"Music"}';                                                                         expect "the tidy up starts" 202
+check "and ends well" job_ok
+check "the whole folder is on its disk" test "$(files_in $D/d3/Music)" = "$ALLMUSIC"
+check "the pool shows the same files with the same data" test "$(pool_sum)" = "$KSUM"
+check "the result is kept" test "$(host '.keeps[0].last_status')" = 0
+post keep_run '{"name":"Music"}';                                                                         expect "with everything in place there is nothing to do" 409 "already on its disks"
+# a new file through the pool lands on the fast disk; the mover takes it to the disk of its folder
+head -c 300000 /dev/urandom > $POOL/Music/new-song.mp3
+check "a new file of the folder lands on the fast disk" test -f $D/cache/Music/new-song.mp3
+touch -d '20 minutes ago' $D/cache/Music/new-song.mp3
+post cache_run '{"name":"cache"}';   expect "the mover starts" 202
+check "and ends well" job_ok
+check "and takes it to the disk chosen for its folder" test -f $D/d3/Music/new-song.mp3
+# the mover is followed by the maintenance, and nothing moves under a sync: wait for it
+tasks_wait
+# a file written straight to another disk is brought back
+mkdir -p $D/d2/Music && head -c 1000 /dev/urandom > $D/d2/Music/stray.mp3 && touch -d '20 minutes ago' $D/d2/Music/stray.mp3
+post keep_run '{"name":"Music"}';    expect "the tidy up of the file landed elsewhere starts" 202
+check "and ends well" job_ok
+check "it is on the chosen disk now" test -f $D/d3/Music/stray.mp3 -a ! -e $D/d2/Music
+# two disks for a folder
+post keep_save "{\"name\":\"Movies\",\"pool\":\"$POOL\",\"path\":\"/Movies\",\"disks\":\"$D/d2:$D/d3\",\"when\":\"04:00\",\"enabled\":true}"
+expect "a folder can have more disks" 202
+ALLMOVIES=$(files_in $POOL/Movies)
+post keep_run '{"name":"Movies"}';   expect "the tidy up of the second folder starts" 202
+check "and ends well" job_ok
+check "the folder is on its two disks only" test "$(( $(files_in $D/d2/Movies) + $(files_in $D/d3/Movies) ))" = "$ALLMOVIES"
+# a folder that stays on the fast disk
+post cache_save "${CACHE%\}},\"stay\":\"Incoming/fresh\"}";   expect "a folder to leave that does not start with / is refused" 400 "invalid value"
+post cache_save "${CACHE%\}},\"stay\":\"/Incoming/fresh:/Tmp\"}"; expect "the folders that stay are saved" 202
+check "and read back" test "$(host '.caches[0].stay')" = "/Incoming/fresh:/Tmp"
+head -c 5000 /dev/urandom > $POOL/Incoming/fresh/stays.bin
+head -c 5000 /dev/urandom > $POOL/Incoming/goes.bin
+find $D/cache -type f -exec touch -d '20 minutes ago' {} +
+post cache_run '{"name":"cache"}';   expect "the mover starts again" 202
+check "and ends well" job_ok
+check "the file of that folder stays on the fast disk" test -f $D/cache/Incoming/fresh/stays.bin
+check "the other one is moved" test ! -e $D/cache/Incoming/goes.bin -a -f $POOL/Incoming/goes.bin
+check "and what stayed is not counted as a problem" test "$(jobf .skipped)" = 0
+tasks_wait
+post cache_save "$CACHE"
+post keep_delete '{"name":"Movies"}'
+post keep_delete '{"name":"Music"}';   expect "a kept folder is forgotten" 202
+check "none is left" test "$(host '.keeps | length')" = 0
+req POST $U/schedule '{"tasks":[{"command":"sync"}]}'
+tasks_wait
+check "the array takes all the moves with a sync" test "$(last_task sync .exit_code)" = 0
 
 section "a sync that goes on after a big tidy up"
 post settings '{"sync_ratio":"x"}';     expect "a ratio that is not a number is refused" 400 "0 to 1000"
