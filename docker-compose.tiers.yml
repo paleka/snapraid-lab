@@ -1,0 +1,22 @@
+# Checks the moves of files among the disks of a pool (a folder to a chosen disk, a disk emptied,
+# a fast disk with its mover), the move of the parity to a larger disk, the size of a folder disk
+# by disk, the reading test of a disk and the sync that goes on after a big tidy up, on the
+# showcase lab: the same disks and options of docker-compose.yml, then tests/tiers-test.sh on them.
+# It uses the port of the lab: stop the lab first.
+#
+#     docker compose -f docker-compose.tiers.yml up --build --abort-on-container-exit --exit-code-from tests
+#     docker compose -f docker-compose.tiers.yml down -v
+name: snapraid-lab-tiers
+services:
+  tests:
+    extends:
+      file: docker-compose.yml
+      service: snapraid
+    container_name: snapraid-lab-tiers
+    environment:
+      LAB_PRESET: "ready"
+      LAB_AUTH: ""
+      LAB_RUN_TESTS: "1"
+      LAB_TEST: "tiers-test.sh"
+volumes:
+  lab:

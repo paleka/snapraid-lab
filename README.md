@@ -43,6 +43,20 @@ something to say.
 | **Share a folder**: who can open it, read only or not, recycle bin<br>[![Share a folder](docs/screenshots/everyday-share-dialog.png)](docs/screenshots/everyday-share-dialog.png) | **Backups**: copies to a USB disk, on a schedule or when it's plugged in<br>[![Backups](docs/screenshots/everyday-backups.png)](docs/screenshots/everyday-backups.png) |
 | **Alerts**: where to send a message when something goes wrong<br>[![Alerts](docs/screenshots/everyday-alerts.png)](docs/screenshots/everyday-alerts.png) | **System**: power, the backup of the settings, diagnostics<br>[![System](docs/screenshots/everyday-system.png)](docs/screenshots/everyday-system.png) |
 
+### A fast disk, a larger parity, and the advanced mode
+
+Every page for everyday use shows the usual choices; its **Advanced** switch shows the finer
+ones, and is remembered page by page. Taken from the showcase lab after
+`docs/tools/tiers-prepare.sh`, which makes the blank USB disk the fast disk of the pool.
+
+| | |
+|---|---|
+| **Disks, with Advanced on**: every disk also offers what applies to it among power settings, what uses it, copy, empty, and the move of the parity<br>[![Disks, with Advanced on](docs/screenshots/tiers-disks-advanced.png)](docs/screenshots/tiers-disks-advanced.png) | **Fast disk**: an SSD in front of the pool: how much waits on it, that it is not protected until moved, and when it is moved<br>[![Fast disk](docs/screenshots/tiers-fast-disk.png)](docs/screenshots/tiers-fast-disk.png) |
+| **Fast disk, its settings**: the time of the move; with Advanced also the age of the files to leave, the fill level and the sync after<br>[![Fast disk, its settings](docs/screenshots/tiers-fast-disk-edit.png)](docs/screenshots/tiers-fast-disk-edit.png) | **The parity on a larger disk**: copied, checked byte by byte, then the array is switched to it; the old parity disk becomes a data disk<br>[![The parity on a larger disk](docs/screenshots/tiers-parity-move.png)](docs/screenshots/tiers-parity-move.png) |
+| **Replace by copying**: when the old disk still reads, its files go straight to the new one<br>[![Replace by copying](docs/screenshots/tiers-replace-copy.png)](docs/screenshots/tiers-replace-copy.png) | **Protection, with Advanced on**: going on after a big tidy up, reading new files twice, stopping on files become empty<br>[![Protection, with Advanced on](docs/screenshots/tiers-protection-advanced.png)](docs/screenshots/tiers-protection-advanced.png) |
+| **My files, with Advanced on**: the size of a folder and its move to one disk<br>[![My files, with Advanced on](docs/screenshots/tiers-files-advanced.png)](docs/screenshots/tiers-files-advanced.png) | **A folder to one disk**: where it is now, where it goes, what happens and what does not change<br>[![A folder to one disk](docs/screenshots/tiers-folder-move.png)](docs/screenshots/tiers-folder-move.png) |
+| **Size of a folder**: how much of it is on every disk<br>[![Size of a folder](docs/screenshots/tiers-folder-size.png)](docs/screenshots/tiers-folder-size.png) | **The tour of the first visit**: five short steps, also in Help<br>[![The tour of the first visit](docs/screenshots/tiers-tour.png)](docs/screenshots/tiers-tour.png) |
+
 ### The Storage and Arrays pages
 
 ![Tour of the Storage and Arrays pages](docs/screenshots/tour.gif)
@@ -67,10 +81,11 @@ of a few hundred MB, described to SnapRAID and to the UI as the disks of the tab
 | **Recovery in the Tasks page**: every step with its result<br>[![Recovery in the Tasks page](docs/screenshots/recover-tasks.png)](docs/screenshots/recover-tasks.png) | **Add an array**: a name, and optionally an existing SnapRAID configuration to take over<br>[![Add an array](docs/screenshots/arrays-add.png)](docs/screenshots/arrays-add.png) |
 | **Move a disk to another array**: with its files, step by step, and when the disk has no parity<br>[![Move a disk to another array](docs/screenshots/arrays-move.png)](docs/screenshots/arrays-move.png) |  |
 
-They are made with `docs/tools/shots.mjs` (Playwright and Chrome) from four states of the lab:
+They are made with `docs/tools/shots.mjs` (Playwright and Chrome) from five states of the lab:
 as it starts (`shots-ready.json`), after `lab scenario mass-delete` and a maintenance
-(`shots-everyday.json`), after `lab scenario dead-disk` (`shots-degraded.json`), and started with
-`LAB_PRESET=blank` (`shots-blank.json`).
+(`shots-everyday.json`), after `docs/tools/tiers-prepare.sh` (`shots-tiers.json`), after
+`lab scenario dead-disk` (`shots-degraded.json`), and started with `LAB_PRESET=blank`
+(`shots-blank.json`).
 
 ## Versions
 
@@ -295,6 +310,24 @@ log; power settings refused by a disk; diagnostics without serial numbers and se
 backup and restore of the settings. In the lab the daemon only logs the idle action
 (`SNAPRAIDD_HOST_DRYRUN=1`): the container must not suspend the machine.
 
+An eighth one, `tests/tiers-test.sh`, checks the moves of files among the disks of a pool and
+the move of the parity, on the showcase lab (stop the lab first; about five minutes, three of
+them waiting for the daemon to run a sync again by itself):
+
+    docker compose -f docker-compose.tiers.yml up --build --abort-on-container-exit --exit-code-from tests
+    docker compose -f docker-compose.tiers.yml down -v
+
+It covers a folder brought to a chosen disk and a disk emptied to the others, with the pool
+showing the same files with the same data before and after, the files with a twin on another
+disk left and named, a path climbing out or going through a link refused, and the sync that asks
+when a disk was emptied; the blank disk `s2` as fast disk in front of the pool: new files landing
+on it, the mover bringing them to the array and running the maintenance, a file just written left
+for the next time; the parity copied to the blank disk `s1`, the same as the original, with the
+old one untouched, a full scrub against the copy, and a deleted file rebuilt from it; a split
+parity, a disk too small and a pool refused; the size of a folder disk by disk; the reading test
+of a whole disk; the copy of a single file; and a sync stopped by the limit of the deleted files
+run again by the daemon when many more files were added, and not when few were.
+
 ## What is emulated
 
 - Every disk is a sparse image file, attached as a loop device with a partition table,
@@ -384,6 +417,7 @@ SMART changes show up at the next probe (every minute).
 | `docker-compose.sizes.yml` | throwaway lab of mixed disk sizes that runs `tests/mixed-size-test.sh` |
 | `docker-compose.arrays.yml` | throwaway lab that runs `tests/multi-array-test.sh` |
 | `docker-compose.machine.yml` | the showcase lab, running `tests/machine-test.sh` |
+| `docker-compose.tiers.yml` | the showcase lab, running `tests/tiers-test.sh` |
 | `docker-compose.existing.yml` | no lab: a machine already using SnapRAID from the shell, for `tests/existing-setup-test.sh` |
 | `entrypoint.sh` | creates and mounts the disks, writes the configs, starts `snapraidd` |
 | `fake-smartctl`, `smartctl-launcher.c` | SMART emulation, self-tests included (SnapRAID only runs real binaries, hence the launcher) |
