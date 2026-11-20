@@ -48,7 +48,8 @@ RUN mkdir /pkg && if [ "$LAB_PACKAGES" = 1 ]; then \
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        zlib1g e2fsprogs xfsprogs btrfs-progs fdisk util-linux mergerfs fuse3 rsync attr jq procps curl ca-certificates && rm -rf /var/lib/apt/lists/*
+        zlib1g e2fsprogs xfsprogs btrfs-progs fdisk util-linux mergerfs fuse3 rsync attr jq procps curl ca-certificates \
+        samba-common-bin samba hdparm ethtool psmisc && rm -rf /var/lib/apt/lists/*
 COPY --from=build /build-engine/snapraid /usr/bin/snapraid
 COPY --from=build /build-daemon/snapraidd /usr/sbin/snapraidd
 COPY --from=build /build-daemon/commander.zip /build-daemon/brutale.zip /usr/share/snapraidd/

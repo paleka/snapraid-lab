@@ -44,6 +44,62 @@ if [ -f "$standby_file" ]; then
     fi
 fi
 
+# Self-tests, asked by the daemon's machine settings: smartctl -t short|long DEV, and the log
+# with smartctl -l selftest [-c] DEV. A short test lasts 60 seconds in the lab, a long one 5 minutes.
+selftest_dir=/run/lab/selftest
+case " $* " in
+*" -t short "*|*" -t long "*)
+    mkdir -p $selftest_dir
+    kind=short; case " $* " in *" -t long "*) kind=long ;; esac
+    echo "$(date +%s) $kind" >> "$selftest_dir/$name"
+    echo "smartctl 7.4 (lab emulation) [$(uname -m)-linux] (local build)"
+    echo
+    echo "=== START OF OFFLINE IMMEDIATE AND SELF-TEST SECTION ==="
+    echo "Sending command: \"Execute SMART $( [ $kind = short ] && echo Short || echo Extended ) self-test routine immediately in off-line mode\"."
+    echo "Testing has begun."
+    exit 0 ;;
+*" -l selftest "*)
+    echo "smartctl 7.4 (lab emulation) [$(uname -m)-linux] (local build)"
+    echo
+    echo "=== START OF READ SMART DATA SECTION ==="
+    now=$(date +%s)
+    if [ -f "$selftest_dir/$name" ]; then
+        last=$(tail -1 "$selftest_dir/$name")
+        start=${last% *}; kind=${last#* }
+        length=60; [ "$kind" = long ] && length=300
+        if [ $((now - start)) -lt $length ]; then
+            echo "Self-test execution status:      ( 249)	Self-test routine in progress..."
+            echo "					$(( 100 - (now - start) * 100 / length ))% of test remaining."
+        else
+            echo "Self-test execution status:      (   0)	The previous self-test routine completed"
+            echo "					without error or no self-test has ever"
+            echo "					been run."
+        fi
+    fi
+    echo "SMART Self-test log structure revision number 1"
+    echo "Num  Test_Description    Status                  Remaining  LifeTime(hours)  LBA_of_first_error"
+    n=1
+    if [ -f "$selftest_dir/$name" ]; then
+        tac "$selftest_dir/$name" | while read -r start kind; do
+            length=60; [ "$kind" = long ] && length=300
+            desc="Short offline"; [ "$kind" = long ] && desc="Extended offline"
+            hours=$(( POWER_ON_HOURS + (start - $(date +%s)) / 3600 ))
+            if [ $((now - start)) -lt $length ]; then
+                status="Self-test routine in progress"; rem="$(( 100 - (now - start) * 100 / length ))%"
+            elif [ "${FAILING:-0}" = 1 ] || [ "${PENDING:-0}" -gt 0 ]; then
+                status="Completed: read failure "; rem="90%"
+            else
+                status="Completed without error "; rem="00%"
+            fi
+            printf "# %-2d %-19s %-29s %-9s %-16s %s\n" $n "$desc" "$status" "$rem" "$POWER_ON_HOURS" "$( [ "$status" = "Completed: read failure " ] && echo 123456 || echo - )"
+            n=$((n + 1))
+        done
+    else
+        echo "No self-tests have been logged.  [To run self-tests, use: smartctl -t]"
+    fi
+    exit 0 ;;
+esac
+
 bytes="$(( $(cat "/sys/block/$loop/size" 2>/dev/null || echo 0) * 512 ))"
 group() { echo "$1" | sed ':a;s/\B[0-9]\{3\}\>/,&/;ta'; }   # 1234567 -> 1,234,567
 # small temperature drift so the charts are not flat

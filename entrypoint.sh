@@ -514,6 +514,8 @@ fi
 
 log "starting snapraidd, UI '$UI' on http://localhost:7627"
 # -N: serve the UI files straight from /ui/<name> without caching, so edits show up on reload
+# the lab never suspends or powers off the machine when idle: the daemon only logs it
+export SNAPRAIDD_HOST_DRYRUN=1
 snapraidd -f -N -c $LAB/etc/snapraidd.conf -C $LAB/etc/snapraid.conf -p /run/snapraidd.pid &
 DAEMON_PID=$!
 if [ "${LAB_RUN_TESTS:-0}" = 1 ]; then

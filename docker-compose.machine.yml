@@ -1,0 +1,21 @@
+# Checks the settings of the machine of the daemon (shares, backups, wipe, copy, files, SMART
+# self-tests, power, folder cache, diagnostics, backup of the settings) on the showcase lab:
+# the same disks and options of docker-compose.yml, then tests/machine-test.sh on them.
+# It uses the port of the lab: stop the lab first.
+#
+#     docker compose -f docker-compose.machine.yml up --build --abort-on-container-exit --exit-code-from tests
+#     docker compose -f docker-compose.machine.yml down -v
+name: snapraid-lab-machine
+services:
+  tests:
+    extends:
+      file: docker-compose.yml
+      service: snapraid
+    container_name: snapraid-lab-machine
+    environment:
+      LAB_PRESET: "ready"
+      LAB_AUTH: ""
+      LAB_RUN_TESTS: "1"
+      LAB_TEST: "machine-test.sh"
+volumes:
+  lab:
