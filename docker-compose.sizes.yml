@@ -26,5 +26,6 @@ services:
       - sizeslab:/lab
       - ${DAEMON_SRC:-../snapraid-daemon}/commander:/ui/commander
       - ${DAEMON_SRC:-../snapraid-daemon}/brutale:/ui/brutale
+      - ${DAEMON_SRC:-../snapraid-daemon}/quiet:/ui/quiet
 volumes:
   sizeslab:

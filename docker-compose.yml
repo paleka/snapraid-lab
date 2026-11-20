@@ -23,7 +23,7 @@ services:
       - "127.0.0.1:7627:7627"
     environment:
       LAB_PRESET: "${LAB_PRESET:-ready}"   # ready: arrays already built | blank: only empty disks, build them with the guided setup
-      LAB_UI: "${LAB_UI:-commander}"       # commander | brutale
+      LAB_UI: "${LAB_UI:-quiet}"           # quiet | commander | brutale
       LAB_AUTH: "${LAB_AUTH:-}"            # user:password to try the login of the daemon; empty: no login
 
       # Array "default": mixed disks, two parity levels
@@ -63,6 +63,7 @@ services:
       # Live UI sources: edit them in the checkout and just reload the browser.
       - ${DAEMON_SRC:-../snapraid-daemon}/commander:/ui/commander
       - ${DAEMON_SRC:-../snapraid-daemon}/brutale:/ui/brutale
+      - ${DAEMON_SRC:-../snapraid-daemon}/quiet:/ui/quiet
     stop_grace_period: 20s
 volumes:
   lab:

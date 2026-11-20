@@ -369,6 +369,34 @@ else
     post settings '{"sync_changes":"","sync_changes_minutes":""}'
 fi
 
+section "space of the arrays and when it gets full"
+SP=$(curl -s $H/space)
+check "every array of the lab is measured" test "$(echo "$SP" | jq -r '.arrays | length')" -ge 3
+check "used and total are sizes of the data disks" test "$(echo "$SP" | jq -r '[.arrays[] | select(.total_bytes > 0 and .used_bytes <= .total_bytes)] | length')" = "$(echo "$SP" | jq -r '.arrays | length')"
+check "all of them are summed up" test "$(echo "$SP" | jq -r '.all.total_bytes == ([.arrays[].total_bytes] | add)')" = true
+check "the samples are a file next to the settings" grep -qP "^\d+\tdefault\t\d+\t\d+$" "$CONFDIR/snapraidd-space.log"
+check "the made-up days of the showcase give a forecast" test "$(echo "$SP" | jq -r '.all.forecast')" = true
+check "growing, it says when it is full" test "$(echo "$SP" | jq -r '(.all.growth_bytes_per_day > 0) and (.all.days_to_full > 0)')" = true
+check "the days of an array are given, the oldest first" test "$(echo "$SP" | jq -r '.arrays[0].days | (length > 7) and (.[0].day < .[-1].day)')" = true
+LINES=$(grep -vc '^#' "$CONFDIR/snapraidd-space.log")
+curl -s $H/space > /dev/null
+check "one sample a day: asking again adds nothing" test "$(grep -vc '^#' "$CONFDIR/snapraidd-space.log")" = "$LINES"
+check "today has one line for every array" test "$(awk -v d=$(curl -s "$H/space?days=1" | jq -r '[.arrays[].days[-1].day] | max') '$1 == d' "$CONFDIR/snapraidd-space.log" | wc -l)" -ge 3
+check "fewer days can be asked" test "$(curl -s "$H/space?days=3" | jq -r '[.arrays[].days | length] | max')" -le 4
+
+section "events of the machine"
+EV=$(curl -s "$H/events?limit=500")
+kinds=$(echo "$EV" | jq -r '[.events[].kind] | unique | join(" ")')
+for k in power_cut power_back power_shutdown usb_open usb_eject burnin; do
+    check "the event $k is recorded" grep -qw "$k" <<< "$kinds"
+done
+check "a power cut says how charged the battery was" test "$(echo "$EV" | jq -r '[.events[] | select(.kind == "power_cut")][-1].text')" = "Running on the battery of the UPS, 80% charged"
+check "the newest is first" test "$(echo "$EV" | jq -r '(.events[0].at >= .events[-1].at)')" = true
+check "the shutdown on battery is a dry run in the lab" grep -q "dry run" <<< "$(echo "$EV" | jq -r '[.events[] | select(.kind == "power_shutdown")][0].text')"
+check "a limit is kept" test "$(curl -s "$H/events?limit=2" | jq -r '.events | length')" = 2
+check "the events are a file next to the settings" grep -qP "^\d+\twarn\tpower_cut\tnut:labups\t" "$CONFDIR/snapraidd-events.log"
+refute "a folder size is not an event" grep -qP "\tusage\t" "$CONFDIR/snapraidd-events.log"
+
 section "the lab as it was"
 # the tests take long: the disks of the other arrays may have gone to sleep, and a sleeping disk tells no health
 for a in $(curl -s $U/arrays | jq -r '.arrays[].name'); do req POST $U/arrays/$a/refresh '{}'; done

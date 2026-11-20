@@ -29,6 +29,18 @@ The lab and the fork were written with the help of an AI coding assistant (Claud
 
 ## Screenshots
 
+### Quiet, the default look
+
+Tiles of different sizes, one blue accent, the status always in words. Light or dark follows the
+computer. Taken from the showcase lab after one update and check of every array, two shares and
+two backups. The pictures further down are of Commander, the original look, with the same pages.
+
+| | |
+|---|---|
+| **Home**: is it safe, with the one thing to do; the last 14 days; space with when it gets full; disks, checks, what comes next, backups, shares, what happened<br>[![Home](docs/screenshots/quiet-home.png)](docs/screenshots/quiet-home.png) | **Home in the dark**: the same, following the computer<br>[![Home, dark](docs/screenshots/quiet-home-dark.png)](docs/screenshots/quiet-home-dark.png) |
+| **Disks**: a click on a bay shows that disk, its facts and what can be done<br>[![Disks](docs/screenshots/quiet-disks.png)](docs/screenshots/quiet-disks.png) | **Protection**: the rules in plain words, how long ago each part was checked, the past runs<br>[![Protection](docs/screenshots/quiet-protection.png)](docs/screenshots/quiet-protection.png) |
+| **Search** (Ctrl K): pages, disks, shares, backups, settings<br>[![Search](docs/screenshots/quiet-search.png)](docs/screenshots/quiet-search.png) | **Phone**<br>[![Phone](docs/screenshots/quiet-phone.png)](docs/screenshots/quiet-phone.png) |
+
 ### The pages for everyday use
 
 The menu starts with the pages for people who are not technical; the detailed pages of the daemon
@@ -424,9 +436,14 @@ Run it only on a machine you use for development.
 
 ## Working on the UI
 
-`commander/` and `brutale/` of the daemon checkout are mounted into the container and the daemon
-runs with `-N` (no cache): edit the HTML/CSS/JS and reload the browser.
-Switch UI with `LAB_UI: "brutale"` in `docker-compose.yml`.
+`quiet/`, `commander/` and `brutale/` of the daemon checkout are mounted into the container and
+the daemon runs with `-N` (no cache): edit the HTML/CSS/JS and reload the browser. The lab opens
+Quiet, the default of new installations; switch with `LAB_UI: "commander"` or `LAB_UI: "brutale"`
+in `docker-compose.yml`. Where the folders are not mounted, the packed theme of the image is used.
+
+The showcase lab starts with 60 days of made-up space samples (`snapraidd-space.log`), so the
+forecast of Home ("full in about…") shows from the first minute. A real machine takes one sample a
+day and shows a forecast after a week.
 
 Changes to the C sources of the daemon need `docker compose up --build`.
 

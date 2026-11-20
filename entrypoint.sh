@@ -20,7 +20,7 @@ TYPES=${LAB_DISK_TYPES:-}          # per-disk kind, e.g. "d1=hdd d2=smr d3=sas d
 FSS=${LAB_DISK_FS:-}               # per-disk filesystem, e.g. "d2=xfs f1=btrfs"; the others get ext4
 SHOWCASE=${LAB_SHOWCASE:-0}        # 1: the configurations use the less common options of SnapRAID and of the daemon
 AUTH=${LAB_AUTH:-}                 # user:password, to try the login of the daemon (net_auth_credential)
-UI=${LAB_UI:-commander}
+UI=${LAB_UI:-quiet}
 PRESET=${LAB_PRESET:-ready}        # ready: array already set up | blank: only empty disks, set it up from the UI
 PARITY_NAMES=(parity 2-parity 3-parity 4-parity 5-parity 6-parity)
 
@@ -484,7 +484,12 @@ if [ -n "$AUTH" ]; then
 fi
 grep -q '^net_acl' $LAB/etc/snapraidd.conf || sed -i 's|^net_web_root = .*|net_acl = +127.0.0.1,+10.0.0.0/8,+172.16.0.0/12,+192.168.0.0/16\n&|' $LAB/etc/snapraidd.conf
 grep -q '^net_storage_admin' $LAB/etc/snapraidd.conf || sed -i 's|^net_web_root = .*|net_storage_admin = 1\n&|' $LAB/etc/snapraidd.conf
-sed -i "s|^net_web_root = .*|net_web_root = /ui/$UI|" $LAB/etc/snapraidd.conf
+# the live sources when they are mounted, otherwise the packed theme of the image
+if [ -d /ui/$UI ]; then
+    sed -i "s|^net_web_root = .*|net_web_root = /ui/$UI|" $LAB/etc/snapraidd.conf
+else
+    sed -i "s|^net_web_root = .*|net_web_root = $UI.zip|" $LAB/etc/snapraidd.conf
+fi
 
 # Sample content on new data disks, a first sync, then some changes left pending.
 seeded=0; seeded_media=0; seeded_flash=0
@@ -511,6 +516,38 @@ if [ $seeded = 1 ] && [ ! -f $LAB/etc/snapraid.content ]; then
     grep -q '^pool ' $LAB/etc/snapraid.conf && snapraid -c $LAB/etc/snapraid.conf -q pool >/dev/null 2>&1
     lab churn >/dev/null
 fi
+
+# The showcase starts with 60 days of space samples, so the forecast of Home has something to
+# show from the first minute. They are made up from the space used now, growing about 0.4% of
+# each array a day; a real machine gathers its own, one a day.
+seed_space() {
+    local f=$LAB/etc/snapraidd-space.log
+    [ -f "$f" ] && return
+    local today=$(( ($(date +%s) + $(date +%z | awk '{s=substr($0,1,1)=="-"?-1:1; print s*(substr($0,2,2)*3600+substr($0,4,2)*60)}')) / 86400 ))
+    echo "# Space of the arrays of the SnapRAID Daemon, one line a day: day (days since 1970), array, used bytes, total bytes of the data disks. Made up by the lab for the days before it started." > "$f"
+    local conf name
+    for conf in $LAB/etc/snapraid.conf $LAB/etc/snapraid/*.conf; do
+        [ -f "$conf" ] || continue
+        name=default
+        [ "$conf" != "$LAB/etc/snapraid.conf" ] && name=$(basename "$conf" .conf)
+        local used=0 total=0 dir u t
+        for dir in $(awk '$1=="data"||$1=="disk"{print $3}' "$conf"); do
+            read -r t u < <(df -B1 --output=size,used "$dir" 2>/dev/null | tail -1)
+            [ -n "$t" ] || continue
+            used=$((used + u)); total=$((total + t))
+        done
+        [ "$total" -gt 0 ] || continue
+        awk -v today=$today -v name=$name -v used=$used -v total=$total 'BEGIN {
+            srand(7)
+            for (d = 60; d >= 1; --d) {
+                u = used - total * 0.004 * d + total * 0.002 * (rand() - 0.5)
+                if (u < 0) u = 0
+                printf "%d\t%s\t%.0f\t%.0f\n", today - d, name, u, total
+            }
+        }' >> "$f"
+    done
+}
+[ "$SHOWCASE" = 1 ] && seed_space
 
 log "starting snapraidd, UI '$UI' on http://localhost:7627"
 # -N: serve the UI files straight from /ui/<name> without caching, so edits show up on reload

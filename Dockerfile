@@ -52,7 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         samba-common-bin samba hdparm ethtool psmisc && rm -rf /var/lib/apt/lists/*
 COPY --from=build /build-engine/snapraid /usr/bin/snapraid
 COPY --from=build /build-daemon/snapraidd /usr/sbin/snapraidd
-COPY --from=build /build-daemon/commander.zip /build-daemon/brutale.zip /usr/share/snapraidd/
+COPY --from=build /build-daemon/quiet.zip /build-daemon/commander.zip /build-daemon/brutale.zip /usr/share/snapraidd/
 COPY --from=build /smartctl /usr/sbin/smartctl
 COPY fake-smartctl /usr/libexec/lab/fake-smartctl
 # In front of the real lsblk (/usr/bin) in the search path of the daemon: it gives the emulated disks a model and a bus.
