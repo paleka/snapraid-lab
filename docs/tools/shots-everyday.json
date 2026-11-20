@@ -1,0 +1,14 @@
+{
+  "shots": [
+    { "name": "everyday-home", "hash": "#/", "h": 1180 },
+    { "name": "everyday-protection", "hash": "#/protection", "h": 1700 },
+    { "name": "everyday-files", "hash": "#/files", "h": 760 },
+    { "name": "everyday-restore", "hash": "#/files", "h": 900, "steps": [{ "click": "[data-sp=\"restore\"]", "wait": 9000 }] },
+    { "name": "everyday-disks", "hash": "#/drives", "h": 1500 },
+    { "name": "everyday-sharing", "hash": "#/sharing", "h": 900 },
+    { "name": "everyday-share-dialog", "hash": "#/sharing", "h": 950, "steps": [{ "click": "[data-sp=\"share-edit\"]", "wait": 2500 }] },
+    { "name": "everyday-backups", "hash": "#/backups", "h": 640 },
+    { "name": "everyday-alerts", "hash": "#/alerts", "h": 900, "steps": [{ "click": "input[name=\"sp-al-ch\"][value=\"ntfy\"]", "wait": 500 }, { "fill": "#sp-al-f-topic", "value": "my-home-server-7f3a" }] },
+    { "name": "everyday-system", "hash": "#/system", "h": 1250 }
+  ]
+}

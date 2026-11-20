@@ -1,8 +1,10 @@
 # SnapRAID lab
 
-A Docker lab with emulated disks, to try and to test the **Storage** page that the
+A Docker lab with emulated disks, to try and to test what the
 [`storage` branch of paleka/snapraid-daemon](https://github.com/paleka/snapraid-daemon/tree/storage)
-adds to the web UI of SnapRAID Daemon.
+adds to SnapRAID Daemon: the **Storage** and **Arrays** pages, the **pages for everyday use**
+(Home, My files, Sharing, Backups, Disks, Protection, Alerts, System, Help) and the settings of
+the machine behind them.
 
 Out of the box it is a showcase: three arrays in one daemon, four mergerfs pools, eighteen disks
 of different sizes, kinds (HDD, shingled HDD, SAS, SATA SSD, NVMe, USB) and filesystems (ext4,
@@ -15,7 +17,7 @@ XFS, Btrfs), and configurations that use most options of SnapRAID and of its dae
 |---|---|---|
 | SnapRAID, the engine | Andrea Mazzoleni | <https://github.com/amadvance/snapraid>, <https://www.snapraid.it/> |
 | SnapRAID Daemon and its web UI | Andrea Mazzoleni | <https://github.com/amadvance/snapraid-daemon>, <https://www.snapraid.it/ui> |
-| Storage page (fork of the daemon) | Robert Paleka | <https://github.com/paleka/snapraid-daemon/tree/storage>, see its `CHANGES-FORK` |
+| Storage, Arrays and everyday pages (fork of the daemon) | Robert Paleka | <https://github.com/paleka/snapraid-daemon/tree/storage>, see its `CHANGES-FORK` |
 | This lab | Robert Paleka | this repository |
 
 The fork and this lab are unofficial: they are not part of SnapRAID and are not reviewed or
@@ -26,6 +28,22 @@ project. For SnapRAID itself see its [manual](https://www.snapraid.it/manual) an
 The lab and the fork were written with the help of an AI coding assistant (Claude).
 
 ## Screenshots
+
+### The pages for everyday use
+
+The menu starts with the pages for people who are not technical; the detailed pages of the daemon
+are under **Advanced**. Taken from the showcase lab after `lab scenario mass-delete`, so Home has
+something to say.
+
+| | |
+|---|---|
+| **Home**: one headline saying if the files are safe, with the one thing to do, then what needs attention and what happened lately<br>[![Home](docs/screenshots/everyday-home.png)](docs/screenshots/everyday-home.png) | **Protection**: when it runs, how much is checked, the safety check, and how long every run took<br>[![Protection](docs/screenshots/everyday-protection.png)](docs/screenshots/everyday-protection.png) |
+| **My files**: the pool, with the disk of every file; check for damage, get deleted files back, copy, rename, delete<br>[![My files](docs/screenshots/everyday-files.png)](docs/screenshots/everyday-files.png) | **Get back deleted files**: what can still be rebuilt, chosen file by file<br>[![Get back deleted files](docs/screenshots/everyday-restore.png)](docs/screenshots/everyday-restore.png) |
+| **Disks**: a picture of the case with the bay of every disk, health, temperature, self-tests, power settings<br>[![Disks](docs/screenshots/everyday-disks.png)](docs/screenshots/everyday-disks.png) | **Sharing**: shared folders with the address to open them, and the people who can<br>[![Sharing](docs/screenshots/everyday-sharing.png)](docs/screenshots/everyday-sharing.png) |
+| **Share a folder**: who can open it, read only or not, recycle bin<br>[![Share a folder](docs/screenshots/everyday-share-dialog.png)](docs/screenshots/everyday-share-dialog.png) | **Backups**: copies to a USB disk, on a schedule or when it's plugged in<br>[![Backups](docs/screenshots/everyday-backups.png)](docs/screenshots/everyday-backups.png) |
+| **Alerts**: where to send a message when something goes wrong<br>[![Alerts](docs/screenshots/everyday-alerts.png)](docs/screenshots/everyday-alerts.png) | **System**: power, the backup of the settings, diagnostics<br>[![System](docs/screenshots/everyday-system.png)](docs/screenshots/everyday-system.png) |
+
+### The Storage and Arrays pages
 
 ![Tour of the Storage and Arrays pages](docs/screenshots/tour.gif)
 
@@ -49,9 +67,10 @@ of a few hundred MB, described to SnapRAID and to the UI as the disks of the tab
 | **Recovery in the Tasks page**: every step with its result<br>[![Recovery in the Tasks page](docs/screenshots/recover-tasks.png)](docs/screenshots/recover-tasks.png) | **Add an array**: a name, and optionally an existing SnapRAID configuration to take over<br>[![Add an array](docs/screenshots/arrays-add.png)](docs/screenshots/arrays-add.png) |
 | **Move a disk to another array**: with its files, step by step, and when the disk has no parity<br>[![Move a disk to another array](docs/screenshots/arrays-move.png)](docs/screenshots/arrays-move.png) |  |
 
-They are made with `docs/tools/shots.mjs` (Playwright and Chrome) from three states of the lab:
-as it starts (`shots-ready.json`), after `lab scenario dead-disk` (`shots-degraded.json`), and
-started with `LAB_PRESET=blank` (`shots-blank.json`).
+They are made with `docs/tools/shots.mjs` (Playwright and Chrome) from four states of the lab:
+as it starts (`shots-ready.json`), after `lab scenario mass-delete` and a maintenance
+(`shots-everyday.json`), after `lab scenario dead-disk` (`shots-degraded.json`), and started with
+`LAB_PRESET=blank` (`shots-blank.json`).
 
 ## Versions
 
@@ -259,6 +278,23 @@ array; a save from the web UI keeping comments and the owner's own `.bak`; a cha
 that does not remount it; and the package removed with everything as before. The packages are for
 x86-64, so on Apple silicon this image is built and run emulated, and it needs the network.
 
+A seventh one, `tests/machine-test.sh`, checks the settings of the machine behind the pages for
+everyday use, on the showcase lab (stop the lab first; about five minutes, two of them waiting for
+a USB disk "plugged in" again):
+
+    docker compose -f docker-compose.machine.yml up --build --abort-on-container-exit --exit-code-from tests
+    docker compose -f docker-compose.machine.yml down -v
+
+It covers the validation of every setting; the folder cache; SMB shares written for Samba and
+accepted by `testparm`, their users and recycle bin, NFS exports; the reset of permissions;
+renames and deletes, with mount points and paths climbing out refused; copies; backups to the USB
+disk `u1`, with and without mirror, of the disk not mounted (mounted for the run and released),
+and started by plugging the disk in; the wipe of the blank disk `s2`, refused for disks of an
+array, mounted disks and partitions; the programs keeping a disk busy; SMART self-tests and their
+log; power settings refused by a disk; diagnostics without serial numbers and secrets; and the
+backup and restore of the settings. In the lab the daemon only logs the idle action
+(`SNAPRAIDD_HOST_DRYRUN=1`): the container must not suspend the machine.
+
 ## What is emulated
 
 - Every disk is a sparse image file, attached as a loop device with a partition table,
@@ -347,9 +383,10 @@ SMART changes show up at the next probe (every minute).
 | `docker-compose.test.yml` | throwaway lab that runs `tests/api-test.sh` |
 | `docker-compose.sizes.yml` | throwaway lab of mixed disk sizes that runs `tests/mixed-size-test.sh` |
 | `docker-compose.arrays.yml` | throwaway lab that runs `tests/multi-array-test.sh` |
+| `docker-compose.machine.yml` | the showcase lab, running `tests/machine-test.sh` |
 | `docker-compose.existing.yml` | no lab: a machine already using SnapRAID from the shell, for `tests/existing-setup-test.sh` |
 | `entrypoint.sh` | creates and mounts the disks, writes the configs, starts `snapraidd` |
-| `fake-smartctl`, `smartctl-launcher.c` | SMART emulation (SnapRAID only runs real binaries, hence the launcher) |
+| `fake-smartctl`, `smartctl-launcher.c` | SMART emulation, self-tests included (SnapRAID only runs real binaries, hence the launcher) |
 | `fake-lsblk` | `lsblk` with the model, serial and bus of the emulated disks |
 | `hook.sh`, `notify.sh` | what the hook and the notifications of the daemon run in the showcase lab |
 | `lab` | the helper used above |
